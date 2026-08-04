@@ -30,6 +30,9 @@ venv/
 .env
 .env.local
 
+# Spring Boot local profile（含本地密钥，不入库）
+**/application-local.yml
+
 # Docker volumes
 mysql_data/
 chroma_data/

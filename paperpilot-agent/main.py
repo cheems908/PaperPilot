@@ -8,10 +8,14 @@ PaperPilot Agent Worker — FastAPI + LangGraph 多 Agent 协同引擎
 import logging
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from agents.pipeline import run_analysis_pipeline
+
+# 加载本机 .env（paperpilot-agent/.env 或仓库根 .env），不入库
+load_dotenv()
 
 log = logging.getLogger("paperpilot.agent")
 

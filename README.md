@@ -4,38 +4,44 @@
 
 > 输入论文 PDF + GitHub 链接 → Paper Agent 理解论文 → Code Agent 分析仓库 → Mapping Agent 建立关联 → Env Agent 生成运行环境
 
-## 架构
+## 架构（Java 主控 + Python 工具层）
 
 ```
-Web UI (未来)
-    │
-Spring Boot Gateway (8080)
-    │
-RocketMQ ──── Agent Worker Cluster (Python, 8001)
-    │              │
-MySQL + Redis    LangGraph (Paper → Code → Mapping → Env)
-    │
-Docker Sandbox (ChromaDB, GROBID)
+┌─────────────────────────────────────────────┐
+│     Spring Boot (Java) — 主控引擎 (8080)     │
+│                                              │
+│  Auth · StateMachine · LangChain4j · API    │
+│  RocketMQ Consumer · Redisson · SSE         │
+│                     │                        │
+│         HTTP REST (内部调用)                  │
+│                     │                        │
+│  Python Worker (8001) — 工具微服务           │
+│  PDF解析 · AST解析 · Embedding生成           │
+│                                              │
+│  MySQL · Redis · RocketMQ · GROBID · ChromaDB│
+└─────────────────────────────────────────────┘
 ```
 
 ## 项目结构
 
 ```
 paperpilot/
-├── docker-compose.yml          # 基础设施（MySQL, Redis, RocketMQ, GROBID, ChromaDB）
-├── paperpilot-api/             # Spring Boot 后端
+├── docker-compose.yml          # 基础设施（MySQL, Redis, RocketMQ, GROBID, ChromaDB, MinIO）
+├── paperpilot-api/             # Spring Boot 后端 (Java)
 │   ├── pom.xml
 │   └── src/main/java/com/paperpilot/api/
-├── paperpilot-agent/           # Python Agent Worker
+├── paperpilot-agent/           # Python Agent Worker（工具微服务）
 │   ├── pyproject.toml
 │   ├── main.py                 # FastAPI 入口
-│   └── agents/                 # LangGraph Agent 定义
-│       ├── paper_agent.py      # 论文理解
-│       ├── code_agent.py       # 代码分析
-│       ├── mapping_agent.py    # 概念映射
-│       ├── env_agent.py        # 环境生成
-│       └── debug_agent.py      # 错误诊断（阶段4）
-├── paperpilot-frontend/        # 前端（后面再加）
+│   └── agents/                 # PDF解析 / AST分析 / Embedding
+├── paperpilot-frontend/        # Vue 3 前端
+│   ├── package.json
+│   ├── vite.config.js
+│   └── src/
+│       ├── App.vue             # 主组件（输入 → 进度 → 结果）
+│       ├── api.js              # API 信封解包
+│       ├── taskEvents.js       # SSE 连接池
+│       └── style.css           # 暗色主题
 └── README.md
 ```
 
@@ -89,6 +95,16 @@ OPENAI_API_KEY=sk-your-key-here
 OPENAI_MODEL=deepseek-chat
 ```
 
+### 5. 启动前端
+
+```bash
+cd ~/projects/paperpilot/paperpilot-frontend
+npm install
+npm run dev
+```
+
+打开 http://localhost:5173
+
 ## API 概览
 
 | Method | Path | 说明 |
@@ -103,17 +119,20 @@ OPENAI_MODEL=deepseek-chat
 
 ## 技术栈
 
-| 层面 | 技术 |
-|------|------|
-| 后端框架 | Spring Boot 4.0 + MyBatis-Plus |
-| 消息队列 | RocketMQ 5.3 |
-| 缓存 | Redis 7 |
-| 数据库 | MySQL 8 |
-| Agent 编排 | LangGraph |
-| PDF 解析 | GROBID / PyMuPDF |
-| 代码分析 | tree-sitter + ast-grep |
-| 向量检索 | ChromaDB |
-| LLM | OpenAI-compatible API |
+| 层面 | 技术 | 所在侧 |
+|------|------|--------|
+| 后端框架 | Spring Boot 4.0 + MyBatis-Plus | Java |
+| LLM 编排 | **LangChain4j** + 自实现 StateMachine | **Java** |
+| 消息队列 | RocketMQ 5.3 (Producer + Consumer) | **Java** |
+| 缓存/锁/限流 | Redis 7 + Redisson | Java |
+| 数据库 | MySQL 8 + Flyway 迁移 | Java |
+| 文件存储 | MinIO | Java |
+| Agent 状态机 | Java Stage 枚举 + Redis 持久化 | **Java** |
+| PDF 解析 | GROBID / PyMuPDF | Python 微服务 |
+| 代码分析 | tree-sitter + ast-grep | Python 微服务 |
+| Embedding | BAAI/bge-small-zh | Python 微服务 |
+| 向量检索 | ChromaDB (REST API) | Java HTTP Client |
+| LLM | DeepSeek (OpenAI-compatible API) | Java LangChain4j |
 
 ## 分阶段路线
 

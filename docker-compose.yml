@@ -3,6 +3,11 @@
 # 启动: docker compose up -d
 # 停止: docker compose down
 # 清理数据: docker compose down -v
+#
+# 第一阶段（MVP）只依赖以下服务；ChromaDB 已注释，后续阶段再启用:
+#   docker compose up -d mysql redis rocketmq-namesrv rocketmq-broker grobid
+#
+# 密钥通过 .env 注入（见 .env.example），不入库。
 
 services:
   mysql:
@@ -10,7 +15,7 @@ services:
     container_name: paperpilot-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: paperpilot123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env (copy .env.example to .env)}
       MYSQL_DATABASE: paperpilot
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
@@ -46,7 +51,7 @@ services:
     ports:
       - "9876:9876"
     healthcheck:
-      test: ["CMD", "sh", "-c", "netstat -an | grep 9876"]
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9876"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,7 +61,7 @@ services:
     image: apache/rocketmq:5.3.0
     container_name: paperpilot-rmq-broker
     restart: unless-stopped
-    command: sh mqbroker -n rocketmq-namesrv:9876 --autoCreateTopicEnable=true
+    command: sh mqbroker -n rocketmq-namesrv:9876
     ports:
       - "10911:10911"
       - "10909:10909"
@@ -74,29 +79,32 @@ services:
     restart: unless-stopped
     ports:
       - "8070:8070"
+    environment:
+      # 规避容器内 JVM cgroup 检测 NPE（CgroupInfo.getMountPoint）
+      JAVA_OPTS: "-XX:-UseContainerSupport"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8070/api/isalive"]
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8070"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # ChromaDB — 向量数据库
-  chromadb:
-    image: chromadb/chroma:latest
-    container_name: paperpilot-chromadb
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-    environment:
-      - IS_PERSISTENT=TRUE
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
+  # ChromaDB — 向量数据库（暂不启用，后续阶段恢复）
+  # chromadb:
+  #   image: chromadb/chroma:latest
+  #   container_name: paperpilot-chromadb
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     - chroma_data:/chroma/chroma
+  #   environment:
+  #     - IS_PERSISTENT=TRUE
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+  #     interval: 15s
+  #     timeout: 5s
+  #     retries: 3
 
 volumes:
   mysql_data:
-  chroma_data:
+  # chroma_data:
