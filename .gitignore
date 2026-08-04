@@ -1,0 +1,47 @@
+# PaperPilot .gitignore
+
+# Java / Maven
+**/target/
+**/.mvn/wrapper/
+**/mvnw
+**/mvnw.cmd
+*.class
+*.jar
+*.war
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+venv/
+*.so
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Docker volumes
+mysql_data/
+chroma_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temp
+/tmp/
+*.tmp

@@ -1,0 +1,43 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: paperpilot-api
+
+  # MySQL
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/paperpilot?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+    username: root
+    password: paperpilot123
+    type: com.alibaba.druid.pool.DruidDataSource
+
+  # Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  # MVP 阶段关闭 Security（阶段2再启用）
+  security:
+    user:
+      name: admin
+      password: admin123
+
+# MyBatis-Plus
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+
+# RocketMQ
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: paperpilot-producer-group
+  consumer:
+    group: paperpilot-consumer-group

@@ -1,0 +1,102 @@
+# docker-compose.yml — PaperPilot 基础设施
+#
+# 启动: docker compose up -d
+# 停止: docker compose down
+# 清理数据: docker compose down -v
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: paperpilot-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: paperpilot123
+      MYSQL_DATABASE: paperpilot
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: paperpilot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # RocketMQ NameServer — 注册中心
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.0
+    container_name: paperpilot-rmq-namesrv
+    restart: unless-stopped
+    command: sh mqnamesrv
+    ports:
+      - "9876:9876"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "netstat -an | grep 9876"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RocketMQ Broker — 消息中转 (依赖 NameServer)
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.0
+    container_name: paperpilot-rmq-broker
+    restart: unless-stopped
+    command: sh mqbroker -n rocketmq-namesrv:9876 --autoCreateTopicEnable=true
+    ports:
+      - "10911:10911"
+      - "10909:10909"
+    environment:
+      NAMESRV_ADDR: rocketmq-namesrv:9876
+      JAVA_OPT_EXT: "-Xms512m -Xmx512m"
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_healthy
+
+  # GROBID — PDF 结构化解析
+  grobid:
+    image: lfoppiano/grobid:0.8.1
+    container_name: paperpilot-grobid
+    restart: unless-stopped
+    ports:
+      - "8070:8070"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8070/api/isalive"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ChromaDB — 向量数据库
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: paperpilot-chromadb
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mysql_data:
+  chroma_data:
