@@ -51,6 +51,9 @@ rocketmq:
 paperpilot:
   worker:
     base-url: ${AGENT_WORKER_URL:http://localhost:8001}
+  # 本地文件存储（MVP 无 MinIO）
+  storage:
+    local-dir: ${PAPERPILOT_STORAGE_DIR:./uploads}
 
 # Actuator
 management:

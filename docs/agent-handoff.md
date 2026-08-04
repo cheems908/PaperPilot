@@ -1,6 +1,6 @@
 # PaperPilot Agent Handoff
 
-> 交接时间：2026-08-04（T0.1 → T1.2 已完成）。所有工作均**未提交**。
+> 交接时间：2026-08-04（T0.1 → T1.3 已完成）。T1.1/T1.2 已提交（`ac18e84`）；T1.3 接口开发工作**未提交**。
 > 技术边界：Spring Boot 管业务/任务状态机/RocketMQ 调度/Redis 进度/SSE；Python Worker 只执行单阶段分析，不改任务状态；MySQL 是任务状态最终事实来源。MVP 不实现用户系统、MinIO、ChromaDB、Docker Sandbox。
 
 ## 1. 架构与技术栈
@@ -28,14 +28,14 @@ paperpilot/  (git repo, branch: master)
 | T0.3 | 配置外置：env 占位符 + .env/.env.example + gitignore | ✅ |
 | T1.1 | 状态机：`TaskStatus`(7) + `TaskStage`(6, MVP 前 4) + `TaskStateMachine` | ✅ |
 | T1.2 | Flyway V1 建 8 表 + 8 实体 + 8 Mapper + 乐观锁拦截器 | ✅ |
+| T1.3 | REST API：project/file/task 控制器 + DTO + 服务层 + V2 迁移（file 表、task 关联列）+ 内存 SSE | ✅ |
 
-测试：`mvn clean test` → **11 tests, 0 failures**（状态机 5 + Flyway 迁移 4 + 持久化 1 + context 1）。
+测试：`mvn clean test` → **27 tests, 0 failures**（状态机 5 + Flyway 迁移 4 + 持久化 1 + 服务集成 4 + 上下文 1 + 控制器 12）。
 
 ## 3. 当前仓库状态（全部未提交）
 
 - 用户未提交改动（勿动）：`README.md`、`PaperPilot-实现与分析方案.md`、`参考.md`
-- 本系列会话改动：见下节
-- 分支 master，最近提交 `8c47b92` / `b8ecd02`
+- 分支 master，T1.1/T1.2 已提交（`ac18e84`）；T1.3 接口开发新增/改动见下节，**未提交**
 
 ## 4. 已修改/新增文件及关键点
 
@@ -57,6 +57,16 @@ paperpilot/  (git repo, branch: master)
 - 测试：`TaskStateMachineTest`、`FlywayMigrationTest`、`TaskStatusPersistenceTest`
 - `paperpilot-agent/main.py` — 顶部加 `load_dotenv()`
 
+**T1.3 接口开发（新增，未提交）**
+- `resources/db/migration/V2__file_and_task_links.sql` — 建 `file` 表；`analysis_task` 加 `source_file_id`/`paper_id`/`repository_id`（可空 + 外键 + 索引）
+- `domain/entity/File.java` + `mapper/FileMapper.java`；`AnalysisTask` 实体加 3 个关联字段
+- `common/` — `ApiResponse{code,message,data}` 信封、`ErrorCode`、`ApiException`、`GlobalExceptionHandler`
+- `dto/` — project/file/task 的请求/响应 record
+- `service/` — `ProjectService`（级联删除）、`FileStorageService`（本地磁盘 + SHA-256）、`AnalysisTaskService`（状态机 + 乐观锁 + request_key 幂等 + file→paper 解析）、`StageExecutionService`（初始 4 阶段行）、`TaskEventService`（内存 SseEmitter，异步初始快照）、`TaskResultService`
+- `controller/` — `ProjectController`/`FileController`/`TaskController`（create-task 返回 202，`/events` 为 SSE）
+- `application.yml` — 加 `paperpilot.storage.local-dir`
+- 测试：3 个 `@WebMvcTest` 控制器 + 3 个 Testcontainers 服务集成；`ApiApplicationTests` 改为 Testcontainers 提供 DataSource（T1.3 起上下文依赖 Mapper）
+
 ## 5. 已确认的技术决策（及原因）
 
 1. **Spring Boot 3.3.5 + Java 17**：4.0.0 与 mybatis-plus-boot3-starter 有兼容风险；3.3.5 是验证过的组合。
@@ -67,11 +77,11 @@ paperpilot/  (git repo, branch: master)
 6. **表 `repository` 实体类命名 `GitRepository`**：避免与 Spring Data `Repository` 混淆。
 7. **code_symbol 唯一索引列长**：`8+64×4+512×4+128×4=2824B`，压进 InnoDB 3072B 上限，否则建索引失败。
 8. **时间戳交给 MySQL**（`DEFAULT CURRENT_TIMESTAMP ON UPDATE`），实体 `FieldStrategy.NEVER`，不写 MetaObjectHandler。
-9. **Flyway 迁移放 `src/main/resources/db/migration/`**，启动自动执行（本地 DB 已升到 v1）。
+9. **Flyway 迁移放 `src/main/resources/db/migration/`**，启动自动执行（本地 DB 已升到 v2）。
 
 ## 6. 未解决问题（风险清单）
 
-1. **`default-enum-type-handler` 未在真实应用验证** — `TaskStatusPersistenceTest` 是手工构建 SqlSessionFactory 并显式设置该 handler 才通过的；application.yml 同名属性是否被 Spring Boot 正确绑定未证实。**下一步优先验证**。
+1. ~~`default-enum-type-handler` 未在真实应用验证~~ — **已解决（T1.3）**：真实应用创建任务，status 写入/读回均为 `QUEUED`，`application.yml` 枚举 handler 绑定生效。
 2. **RocketMQ 启动 5 条 `BeanPostProcessorChecker` 警告** — 2.3.2 已知问题，功能正常，勿恐慌。
 3. **`commons-logging` 类路径冲突** — RocketMQ 传递依赖，spring-jcl 已桥接，日志有提示但无碍。
 4. **新克隆需手工初始化** — 需 `cp .env.example .env` + 创建 `application-local.yml`，无自动化脚手架。
@@ -80,6 +90,11 @@ paperpilot/  (git repo, branch: master)
 7. **`stage_execution.snapshot` JSON 契约未定义** — T1.3 编排时定。
 8. **`paperpilot.worker.base-url` 无消费方** — 仅文档化，Worker 集成时用 `@ConfigurationProperties`。
 9. **所有工作未提交** — 建议下一阶段先 commit（README/参考.md 属用户改动，勿一并提交）。
+10. **RocketMQ 调度 + Worker 集成未实现** — create-task 仅置 `QUEUED` 并建阶段行，未发 MQ 消息、无消费回写；为下一阶段核心工作。
+11. **SSE 为单实例内存实现** — 无 Redis Pub/Sub 跨实例广播；多实例部署时事件只在被订阅实例上可见。
+12. **前端未对齐新 API** — `App.vue` 仍用旧路径 `/api/papers/upload`、`/api/tasks`、`/api/tasks/{id}/progress`；需切 `/api/v1/...`，且 `taskEventsPolicy.js` 终态名（`COMPLETED`/`FAILED`）与后端（`SUCCEEDED`/`FAILED`/`CANCELLED`）不一致。
+13. **cancel/retry 受状态机限制** — cancel 仅 `RUNNING→CANCELLED`（QUEUED 不可取消）；retry 仅 `WAITING_RETRY→RUNNING`（FAILED 为终态不可重试）。如需放宽需改 `TaskStateMachine` 及其测试。
+14. **file 无下载/删除端点** — 上传只落盘写表，无 `GET /files/{id}` 下载，无孤儿文件清理策略。
 
 ## 7. 关键命令与验证结果
 
@@ -88,9 +103,21 @@ paperpilot/  (git repo, branch: master)
 docker compose up -d mysql redis rocketmq-namesrv rocketmq-broker grobid
 
 # Java 测试 + 启动
-cd paperpilot-api && mvn clean test          # ✅ 11 tests, 0 failures
-mvn -q spring-boot:run &                     # ✅ 启动 4.8s，Flyway 应用 v1
+cd paperpilot-api && mvn clean test          # ✅ 27 tests, 0 failures（V1+V2 迁移）
+mvn -q spring-boot:run &                     # ✅ Flyway 应用 V2（file 表 + task 关联列）
 curl localhost:8080/actuator/health          # ✅ {"status":"UP"}
+
+# T1.3 API 冒烟（真实 MySQL/Redis/RocketMQ）
+curl -s -X POST localhost:8080/api/v1/projects \
+  -H 'Content-Type: application/json' -d '{"name":"demo"}'      # → data.id
+curl -s -X POST localhost:8080/api/v1/files/papers \
+  -F 'file=@/tmp/paperpilot-test.pdf'                            # → data.fileId
+curl -s -X POST localhost:8080/api/v1/projects/1/analysis-tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"fileId":1,"githubUrl":"https://github.com/paperpilot/patchtst"}'  # → 202 data.status=QUEUED
+curl -s localhost:8080/api/v1/tasks/1/stages                     # → 4 阶段行
+curl -s localhost:8080/api/v1/tasks/1/result                     # → 任务结果
+curl -N localhost:8080/api/v1/tasks/1/events                     # → SSE 连接 + 初始快照
 
 # Python Worker（conda env: paperpilot）
 source ~/miniconda3/etc/profile.d/conda.sh && conda activate paperpilot
@@ -105,12 +132,13 @@ docker exec paperpilot-mysql mysql -uroot -ppaperpilot123 paperpilot -e \
 
 ## 8. 下一步任务（按优先级）
 
-1. **提交当前工作**（排除 README.md / 参考.md / PaperPilot-实现与分析方案.md 用户文件）
-2. **验证 §6.1**：写一个 `@SpringBootTest`（带 DataSource）或用真实 DB 跑一次 Mapper 写入，确认 application.yml 的枚举 handler 绑定生效；若不生效改方案（如给枚举加 `@EnumValue`）
-3. **T1.3 任务编排服务层**：`AnalysisTaskService`（状态机 + 乐观锁更新）、`StageExecutionService`（attempt 递增、快照）、`request_key` 幂等、`stage_execution.snapshot` JSON 契约
-4. **T1.4 REST API**：project/paper/repository/task 的创建与查询端点
-5. **Worker 集成**：Spring 经 RocketMQ 发单阶段任务 → Python 消费 → 回写；补 `paperpilot.worker.base-url` 消费方
-6. **清理**：`docker compose up -d --remove-orphans` 清 chromadb 孤儿
+1. **提交 T1.3 工作**（排除 README.md / 参考.md / PaperPilot-实现与分析方案.md 用户文件）
+2. **RocketMQ 调度**：`AnalysisTaskDispatcher` 生产者发单阶段消息 → 补 `paperpilot.worker.base-url` 消费方 → Python Worker 消费回写 stage/status（经状态机 + 乐观锁）
+3. **Redis 进度 + Pub/Sub SSE**：`task:{id}:progress` 键 + 事件广播，替换内存 `TaskEventService`；补 `stage_execution.snapshot` JSON 契约
+4. **前端切新 API**：`/api/v1/...` 路径 + `taskEventsPolicy.js` 终态名对齐后端
+5. **file 下载端点 + 清理策略**：`GET /files/{id}`、超时/孤儿文件清理
+6. **验证 §6.1 枚举 handler 真实绑定**：起真实应用跑一次写入（见 §7 curl 流程）
+7. **清理**：`docker compose up -d --remove-orphans` 清 chromadb 孤儿
 
 ## 9. 避免重复尝试的失败方案
 

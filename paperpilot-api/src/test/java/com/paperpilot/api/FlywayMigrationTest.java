@@ -35,7 +35,7 @@ class FlywayMigrationTest {
                             + "ORDER BY table_name");
             assertThat(tables).containsExactlyInAnyOrder(
                     "project", "paper", "repository", "analysis_task",
-                    "stage_execution", "paper_concept", "code_symbol", "concept_code_mapping");
+                    "stage_execution", "paper_concept", "code_symbol", "concept_code_mapping", "file");
         }
     }
 
@@ -45,7 +45,7 @@ class FlywayMigrationTest {
 
         try (Connection conn = openConnection(); Statement stmt = conn.createStatement()) {
             for (String table : new String[]{"project", "paper", "repository", "analysis_task",
-                    "stage_execution", "paper_concept", "code_symbol", "concept_code_mapping"}) {
+                    "stage_execution", "paper_concept", "code_symbol", "concept_code_mapping", "file"}) {
                 List<String> cols = queryStrings(stmt,
                         "SELECT column_name FROM information_schema.columns "
                                 + "WHERE table_schema = DATABASE() AND table_name = '" + table + "'");

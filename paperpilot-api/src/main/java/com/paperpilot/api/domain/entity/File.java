@@ -6,35 +6,35 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.Version;
-import com.paperpilot.api.domain.enums.TaskStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** 分析总任务（状态机核心实体）. */
+/**
+ * 上传的文件资源（本地磁盘存储，MVP 无 MinIO）.
+ *
+ * <p>与 {@link Paper} 分离：上传产生本记录（含原始文件名 / SHA-256 / 大小），
+ * 创建任务时再由 file 创建 paper 行，并把 {@code file.id} 记入
+ * {@code analysis_task.source_file_id}，避免把文件资源与论文业务实体混淆。
+ */
 @Data
-@TableName("analysis_task")
-public class AnalysisTask {
+@TableName("file")
+public class File {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long projectId;
+    /** 原始文件名（如 PatchTST.pdf） */
+    private String fileName;
 
-    /** 来源上传文件（file.id，可空：任务可能不关联文件） */
-    private Long sourceFileId;
+    /** 内容 SHA-256（十六进制） */
+    private String sha256;
 
-    /** 论文（paper.id，可空：任务可能只关联仓库） */
-    private Long paperId;
+    /** 文件字节数 */
+    private Long size;
 
-    /** 仓库（repository.id，可空：任务可能只关联论文） */
-    private Long repositoryId;
-
-    /** 幂等请求键（唯一约束 uk_task_request_key） */
-    private String requestKey;
-
-    /** 任务总状态，迁移必须经 {@code TaskStateMachine} 校验 */
-    private TaskStatus status;
+    /** 本地磁盘存储路径 */
+    private String storagePath;
 
     @TableField(insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;
