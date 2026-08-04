@@ -4,6 +4,7 @@ import com.paperpilot.api.domain.entity.AnalysisTask;
 import com.paperpilot.api.domain.entity.GitRepository;
 import com.paperpilot.api.domain.entity.Paper;
 import com.paperpilot.api.domain.entity.StageExecution;
+import com.paperpilot.api.domain.enums.StageExecutionStatus;
 import com.paperpilot.api.domain.enums.TaskStatus;
 import com.paperpilot.api.dto.task.PaperInfo;
 import com.paperpilot.api.dto.task.RepositoryInfo;
@@ -60,7 +61,7 @@ public class TaskResultService {
         // 聚合已完成阶段的快照：stage.name -> snapshot JSON
         Map<String, Object> result = new LinkedHashMap<>();
         for (StageExecution s : stages) {
-            if (s.getStatus() == TaskStatus.SUCCEEDED && s.getSnapshot() != null) {
+            if (s.getStatus() == StageExecutionStatus.SUCCEEDED && s.getSnapshot() != null) {
                 result.put(s.getStage().name(), s.getSnapshot());
             }
         }

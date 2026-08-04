@@ -1,5 +1,5 @@
 # PaperPilot .gitignore
-
+docs/
 # Java / Maven
 **/target/
 **/.mvn/wrapper/

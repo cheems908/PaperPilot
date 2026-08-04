@@ -7,6 +7,7 @@ import com.paperpilot.api.domain.entity.GitRepository;
 import com.paperpilot.api.domain.entity.Paper;
 import com.paperpilot.api.domain.entity.Project;
 import com.paperpilot.api.domain.entity.StageExecution;
+import com.paperpilot.api.domain.enums.StageExecutionStatus;
 import com.paperpilot.api.domain.enums.TaskStage;
 import com.paperpilot.api.domain.enums.TaskStatus;
 import com.paperpilot.api.dto.task.CreateTaskRequest;
@@ -95,7 +96,7 @@ class AnalysisTaskServicePersistenceTest {
             // 2) 4 个初始阶段行：attempt=1、PENDING，覆盖 MVP 前 4 阶段
             List<StageExecution> stages = stageService.listByTask(resp.taskId());
             assertThat(stages).hasSize(TaskStage.MVP_STAGES.size());
-            assertThat(stages).allMatch(s -> s.getAttempt() == 1 && s.getStatus() == TaskStatus.PENDING);
+            assertThat(stages).allMatch(s -> s.getAttempt() == 1 && s.getStatus() == StageExecutionStatus.PENDING);
             assertThat(stages).extracting(StageExecution::getStage)
                     .containsExactlyInAnyOrderElementsOf(TaskStage.MVP_STAGES);
 

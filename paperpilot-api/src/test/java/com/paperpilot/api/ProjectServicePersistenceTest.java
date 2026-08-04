@@ -9,6 +9,7 @@ import com.paperpilot.api.domain.entity.Paper;
 import com.paperpilot.api.domain.entity.PaperConcept;
 import com.paperpilot.api.domain.entity.Project;
 import com.paperpilot.api.domain.entity.StageExecution;
+import com.paperpilot.api.domain.enums.StageExecutionStatus;
 import com.paperpilot.api.domain.enums.TaskStage;
 import com.paperpilot.api.domain.enums.TaskStatus;
 import com.paperpilot.api.dto.project.ProjectCreateRequest;
@@ -111,7 +112,7 @@ class ProjectServicePersistenceTest {
             stage.setTaskId(task.getId());
             stage.setStage(TaskStage.PARSE_PAPER);
             stage.setAttempt(1);
-            stage.setStatus(TaskStatus.PENDING);
+            stage.setStatus(StageExecutionStatus.PENDING);
             stageMapper.insert(stage);
 
             // 级联删除

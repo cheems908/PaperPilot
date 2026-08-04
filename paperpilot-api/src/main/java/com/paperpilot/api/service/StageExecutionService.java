@@ -2,8 +2,8 @@ package com.paperpilot.api.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.paperpilot.api.domain.entity.StageExecution;
+import com.paperpilot.api.domain.enums.StageExecutionStatus;
 import com.paperpilot.api.domain.enums.TaskStage;
-import com.paperpilot.api.domain.enums.TaskStatus;
 import com.paperpilot.api.dto.task.StageResponse;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class StageExecutionService {
             execution.setTaskId(taskId);
             execution.setStage(stage);
             execution.setAttempt(1);
-            execution.setStatus(TaskStatus.PENDING);
+            execution.setStatus(StageExecutionStatus.PENDING);
             stageExecutionMapper.insert(execution);
             list.add(execution);
         }
