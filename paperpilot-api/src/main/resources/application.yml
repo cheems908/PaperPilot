@@ -54,6 +54,10 @@ paperpilot:
   # 本地文件存储（MVP 无 MinIO）
   storage:
     local-dir: ${PAPERPILOT_STORAGE_DIR:./uploads}
+  # MQ：阶段任务消息 topic 与消费者组（环境变量可覆盖，见 T2-01 契约）
+  mq:
+    task-topic: ${TASK_MQ_TOPIC:paperpilot-analysis-stage}
+    consumer-group: ${TASK_MQ_CONSUMER_GROUP:paperpilot-stage-orchestrator}
 
 # Actuator
 management:
