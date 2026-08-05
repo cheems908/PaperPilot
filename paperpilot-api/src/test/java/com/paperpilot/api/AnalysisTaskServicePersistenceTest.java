@@ -61,9 +61,11 @@ class AnalysisTaskServicePersistenceTest {
             StageExecutionMapper stageExecutionMapper = session.getMapper(StageExecutionMapper.class);
 
             StageExecutionService stageService = new StageExecutionService(stageExecutionMapper);
+            // 手工组装（无 Spring 上下文）：事件发布用 no-op，AFTER_COMMIT 派发由 TaskCreatedEventTest 覆盖
             AnalysisTaskService taskService = new AnalysisTaskService(
                     taskMapper, projectMapper, fileMapper, paperMapper, repositoryMapper,
-                    stageService, new TaskEventService());
+                    stageService, new TaskEventService(), event -> {
+                    });
 
             Project project = new Project();
             project.setName("p");
@@ -101,6 +103,14 @@ class AnalysisTaskServicePersistenceTest {
             assertThat(stages).allMatch(s -> s.getAttempt() == 1 && s.getStatus() == StageExecutionStatus.PENDING);
             assertThat(stages).extracting(StageExecution::getStage)
                     .containsExactlyInAnyOrderElementsOf(TaskStage.MVP_STAGES);
+            // 文件任务的 PARSE_PAPER 阶段已固化输入快照（消费方从 DB 加载阶段输入）
+            StageExecution parsePaper = stages.stream()
+                    .filter(s -> s.getStage() == TaskStage.PARSE_PAPER)
+                    .findFirst().orElseThrow();
+            assertThat(parsePaper.getInputSnapshot())
+                    .contains("\"schemaVersion\":1")
+                    .contains("\"storagePath\"")
+                    .contains("\"fileId\":" + file.getId());
 
             // 3) request_key 幂等：同 key 返回同一任务
             TaskResponse again = taskService.createTask(project.getId(),

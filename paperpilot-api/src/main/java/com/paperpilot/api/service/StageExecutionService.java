@@ -2,9 +2,12 @@ package com.paperpilot.api.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.paperpilot.api.domain.entity.StageExecution;
 import com.paperpilot.api.domain.enums.StageExecutionStatus;
 import com.paperpilot.api.domain.enums.TaskStage;
+import com.paperpilot.api.dto.snapshot.StageInputSnapshot;
+import com.paperpilot.api.dto.snapshot.StageSnapshotCodec;
 import com.paperpilot.api.dto.task.StageResponse;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +42,18 @@ public class StageExecutionService {
             list.add(execution);
         }
         return list;
+    }
+
+    /**
+     * 为第一阶段（PARSE_PAPER，attempt=1）写入输入快照，供后续消费者从 DB 加载阶段输入。
+     * 仅在存在论文源文件时调用；repo-only 任务无 source，不写。
+     */
+    public void writeFirstStageInput(Long taskId, StageInputSnapshot input) throws JsonProcessingException {
+        stageExecutionMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
+                .eq(StageExecution::getTaskId, taskId)
+                .eq(StageExecution::getStage, TaskStage.PARSE_PAPER)
+                .eq(StageExecution::getAttempt, 1)
+                .set(StageExecution::getInputSnapshot, StageSnapshotCodec.toJson(input)));
     }
 
     /** 按创建顺序列出任务的全部阶段执行。 */

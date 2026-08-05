@@ -1,6 +1,7 @@
 package com.paperpilot.api.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.paperpilot.api.common.ApiException;
 import com.paperpilot.api.common.ErrorCode;
 import com.paperpilot.api.domain.TaskStateMachine;
@@ -9,7 +10,11 @@ import com.paperpilot.api.domain.entity.File;
 import com.paperpilot.api.domain.entity.GitRepository;
 import com.paperpilot.api.domain.entity.Paper;
 import com.paperpilot.api.domain.entity.Project;
+import com.paperpilot.api.domain.enums.TaskStage;
 import com.paperpilot.api.domain.enums.TaskStatus;
+import com.paperpilot.api.dto.snapshot.StageInputSnapshot;
+import com.paperpilot.api.dto.snapshot.StageResourceRef;
+import com.paperpilot.api.dto.snapshot.StageSnapshotContract;
 import com.paperpilot.api.dto.task.CreateTaskRequest;
 import com.paperpilot.api.dto.task.TaskDetailResponse;
 import com.paperpilot.api.dto.task.TaskResponse;
@@ -18,7 +23,9 @@ import com.paperpilot.api.mapper.FileMapper;
 import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.PaperMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
+import com.paperpilot.api.mq.TaskCreatedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +58,7 @@ public class AnalysisTaskService {
     private final GitRepositoryMapper repositoryMapper;
     private final StageExecutionService stageExecutionService;
     private final TaskEventService taskEventService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /** 创建分析任务，返回 202 响应体（taskId/status/eventsUrl）。 */
     @Transactional
@@ -78,12 +86,14 @@ public class AnalysisTaskService {
         // 由上传文件解析出 paper 记录（不直接写 fileId 进 paper_id）
         Long sourceFileId = null;
         Long paperId = null;
+        String paperStoragePath = null;
         if (hasFile) {
             File file = fileMapper.selectById(req.fileId());
             if (file == null) {
                 throw new ApiException(ErrorCode.NOT_FOUND, "上传文件不存在");
             }
             sourceFileId = file.getId();
+            paperStoragePath = file.getStoragePath();
             paperId = createPaperFromFile(projectId, file);
         }
 
@@ -111,6 +121,19 @@ public class AnalysisTaskService {
         }
 
         stageExecutionService.createInitialStages(task.getId());
+        // 论文源文件存在时，为第一阶段（PARSE_PAPER）固化输入快照，消费方从 DB 加载阶段输入
+        if (paperId != null && paperStoragePath != null) {
+            StageInputSnapshot input = new StageInputSnapshot(
+                    StageSnapshotContract.SCHEMA_VERSION, task.getId(), TaskStage.PARSE_PAPER,
+                    new StageResourceRef(sourceFileId, paperStoragePath));
+            try {
+                stageExecutionService.writeFirstStageInput(task.getId(), input);
+            } catch (JsonProcessingException e) {
+                throw new ApiException(ErrorCode.INTERNAL, "阶段输入快照序列化失败");
+            }
+        }
+        // 领域事件：事务提交后由 TaskCreatedEventListener 派发首阶段消息（幂等命中不发布）
+        eventPublisher.publishEvent(new TaskCreatedEvent(task.getId(), requestKey));
         taskEventService.publish(task.getId(),
                 TaskEvent.of(task.getId(), task.getStatus().name(), null, "任务已创建，等待执行"));
         return toResponse(task);

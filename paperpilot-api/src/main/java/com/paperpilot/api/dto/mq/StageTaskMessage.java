@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.paperpilot.api.common.RequestId;
 import com.paperpilot.api.domain.enums.TaskStage;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -54,6 +55,20 @@ public record StageTaskMessage(
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+    /**
+     * 生产方工厂：填充 {@code schemaVersion}/{@code messageId}/{@code requestId}/{@code createdAt}。
+     *
+     * <p>{@code messageId} 每次派发重新生成（供消费者去重）；{@code requestId} 沿用
+     * HTTP 链路标识（T1.4-04，来自 MDC），非 HTTP 上下文（定时重试等）回退为新生成值。
+     */
+    public static StageTaskMessage create(Long taskId, Long stageExecutionId,
+                                          TaskStage stage, Integer attempt) {
+        String trace = RequestId.current();
+        return new StageTaskMessage(SCHEMA_VERSION, RequestId.generate(),
+                (trace == null || trace.isBlank()) ? RequestId.generate() : trace,
+                taskId, stageExecutionId, stage, attempt, Instant.now());
+    }
 
     public static String toJson(StageTaskMessage message) throws JsonProcessingException {
         return MAPPER.writeValueAsString(message);

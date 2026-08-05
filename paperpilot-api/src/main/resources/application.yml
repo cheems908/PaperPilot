@@ -51,6 +51,14 @@ rocketmq:
 paperpilot:
   worker:
     base-url: ${AGENT_WORKER_URL:http://localhost:8001}
+    connect-timeout: ${WORKER_CONNECT_TIMEOUT:3s}
+    read-timeout: ${WORKER_READ_TIMEOUT:60s}
+    # 读取超时按阶段覆盖（未配置的阶段用默认 read-timeout）
+    stage-read-timeouts:
+      PARSE_PAPER: ${WORKER_READ_TIMEOUT_PARSE:120s}
+      CLONE_REPOSITORY: ${WORKER_READ_TIMEOUT_CLONE:300s}
+      INDEX_CODE: ${WORKER_READ_TIMEOUT_INDEX:120s}
+      MAP_CONCEPTS: ${WORKER_READ_TIMEOUT_MAP:60s}
   # 本地文件存储（MVP 无 MinIO）
   storage:
     local-dir: ${PAPERPILOT_STORAGE_DIR:./uploads}

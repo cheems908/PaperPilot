@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -48,13 +49,15 @@ class AnalysisTaskServiceTest {
     StageExecutionService stageExecutionService;
     @Mock
     TaskEventService taskEventService;
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     AnalysisTaskService service;
 
     @BeforeEach
     void setUp() {
         service = new AnalysisTaskService(analysisTaskMapper, projectMapper, fileMapper,
-                paperMapper, repositoryMapper, stageExecutionService, taskEventService);
+                paperMapper, repositoryMapper, stageExecutionService, taskEventService, eventPublisher);
     }
 
     // ── 取消 ──────────────────────────────────────────────────────────────
