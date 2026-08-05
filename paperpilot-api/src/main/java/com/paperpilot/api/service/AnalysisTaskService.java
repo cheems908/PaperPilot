@@ -130,35 +130,57 @@ public class AnalysisTaskService {
         return task;
     }
 
-    /** 取消任务：状态机允许 RUNNING → CANCELLED。 */
+    /**
+     * 取消任务：PENDING / QUEUED / RUNNING / WAITING_RETRY 可取消到 CANCELLED。
+     * 重复取消幂等（已 CANCELLED 直接返回同一终态）；SUCCEEDED / FAILED 取消视为
+     * 非法迁移（ILLEGAL_TASK_TRANSITION）。更新依赖 @Version 乐观锁：并发下只有
+     * 一个更新成功，其余抛 CONFLICT。
+     */
+    @Transactional
     public TaskDetailResponse cancel(Long taskId) {
         AnalysisTask task = getTaskOrThrow(taskId);
-        TaskStatus next = tryTransition(task.getStatus(), TaskStatus.CANCELLED, "取消");
+        if (task.getStatus() == TaskStatus.CANCELLED) {
+            return toDetail(task); // 重复取消幂等，不再发事件/动阶段
+        }
+        TaskStatus next = requireTransition(task.getStatus(), TaskStatus.CANCELLED);
         task.setStatus(next);
-        analysisTaskMapper.updateById(task); // @Version 乐观锁并发兜底
+        if (analysisTaskMapper.updateById(task) == 0) {
+            throw new ApiException(ErrorCode.CONFLICT, "任务状态已变更，请刷新后重试");
+        }
+        // 尚未执行的阶段同步标记 CANCELLED（条件更新，仅影响 PENDING/WAITING_RETRY）
+        stageExecutionService.cancelPendingStages(taskId);
         taskEventService.publish(taskId, TaskEvent.of(taskId, next.name(), null, "任务已取消"));
         return toDetail(task);
     }
 
-    /** 重试任务：状态机允许 WAITING_RETRY → RUNNING。 */
+    /**
+     * 人工重试：仅 FAILED → QUEUED。重置当前失败阶段的调度信息（见
+     * {@link StageExecutionService#resetForRetry}）但保留历史 attempt；
+     * 其他状态调用视为非法迁移（ILLEGAL_TASK_TRANSITION）。
+     */
+    @Transactional
     public TaskDetailResponse retry(Long taskId) {
         AnalysisTask task = getTaskOrThrow(taskId);
-        if (task.getStatus() != TaskStatus.WAITING_RETRY) {
-            throw new ApiException(ErrorCode.CONFLICT,
-                    "仅等待重试状态的任务可重试，当前状态 " + task.getStatus());
+        if (task.getStatus() != TaskStatus.FAILED) {
+            throw new ApiException(ErrorCode.ILLEGAL_TASK_TRANSITION,
+                    "仅 FAILED 状态的任务可人工重试，当前状态 " + task.getStatus());
         }
-        TaskStatus next = TaskStateMachine.transition(TaskStatus.WAITING_RETRY, TaskStatus.RUNNING);
+        TaskStatus next = requireTransition(TaskStatus.FAILED, TaskStatus.QUEUED);
         task.setStatus(next);
-        analysisTaskMapper.updateById(task);
-        taskEventService.publish(taskId, TaskEvent.of(taskId, next.name(), null, "任务重新执行"));
+        if (analysisTaskMapper.updateById(task) == 0) {
+            throw new ApiException(ErrorCode.CONFLICT, "任务状态已变更，请刷新后重试");
+        }
+        stageExecutionService.resetForRetry(taskId);
+        taskEventService.publish(taskId, TaskEvent.of(taskId, next.name(), null, "任务已重新入队"));
         return toDetail(task);
     }
 
-    private TaskStatus tryTransition(TaskStatus from, TaskStatus to, String action) {
+    /** 经状态机校验的迁移；非法迁移抛稳定业务码 ILLEGAL_TASK_TRANSITION。 */
+    private TaskStatus requireTransition(TaskStatus from, TaskStatus to) {
         try {
             return TaskStateMachine.transition(from, to);
         } catch (IllegalStateException e) {
-            throw new ApiException(ErrorCode.CONFLICT, "当前状态 " + from + " 不允许" + action);
+            throw new ApiException(ErrorCode.ILLEGAL_TASK_TRANSITION, e.getMessage());
         }
     }
 

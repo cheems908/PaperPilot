@@ -1,6 +1,7 @@
 package com.paperpilot.api;
 
 import com.paperpilot.api.common.ApiException;
+import com.paperpilot.api.common.ErrorCode;
 import com.paperpilot.api.domain.entity.AnalysisTask;
 import com.paperpilot.api.domain.entity.File;
 import com.paperpilot.api.domain.entity.GitRepository;
@@ -30,6 +31,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.sql.DataSource;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -111,23 +113,31 @@ class AnalysisTaskServicePersistenceTest {
                     .isInstanceOf(ApiException.class)
                     .hasMessageContaining("至少需要");
 
-            // 5) QUEUED 不允许取消（状态机）→ 409
-            assertThatThrownBy(() -> taskService.cancel(resp.taskId()))
-                    .isInstanceOf(ApiException.class);
+            // 5) QUEUED 可取消；未执行的 PENDING 阶段同步标记 CANCELLED
+            TaskDetailResponse cancelledQueued = taskService.cancel(resp.taskId());
+            assertThat(cancelledQueued.status()).isEqualTo("CANCELLED");
+            assertThat(taskMapper.selectById(resp.taskId()).getStatus()).isEqualTo(TaskStatus.CANCELLED);
+            assertThat(stageService.listByTask(resp.taskId()))
+                    .allMatch(s -> s.getStatus() == StageExecutionStatus.CANCELLED);
 
-            // 6) RUNNING → CANCELLED（先模拟 Worker 置 RUNNING）
-            AnalysisTask running = taskMapper.selectById(resp.taskId());
+            // 6) 重复取消幂等：返回同一终态，不抛异常
+            assertThat(taskService.cancel(resp.taskId()).status()).isEqualTo("CANCELLED");
+
+            // 7) CANCELLED 不可重试 → ILLEGAL_TASK_TRANSITION
+            assertThatThrownBy(() -> taskService.retry(resp.taskId()))
+                    .isInstanceOf(ApiException.class)
+                    .extracting(e -> ((ApiException) e).getCode())
+                    .isEqualTo(ErrorCode.ILLEGAL_TASK_TRANSITION.getCode());
+
+            // 8) RUNNING → CANCELLED（先模拟 Worker 置 RUNNING）
+            TaskResponse runningResp = taskService.createTask(project.getId(),
+                    new CreateTaskRequest(file.getId(), null, null, "req-running"));
+            AnalysisTask running = taskMapper.selectById(runningResp.taskId());
             running.setStatus(TaskStatus.RUNNING);
             taskMapper.updateById(running);
-            TaskDetailResponse cancelled = taskService.cancel(resp.taskId());
-            assertThat(cancelled.status()).isEqualTo("CANCELLED");
-            assertThat(taskMapper.selectById(resp.taskId()).getStatus()).isEqualTo(TaskStatus.CANCELLED);
+            assertThat(taskService.cancel(runningResp.taskId()).status()).isEqualTo("CANCELLED");
 
-            // 7) 终态 CANCELLED 不允许重试 → 409
-            assertThatThrownBy(() -> taskService.retry(resp.taskId()))
-                    .isInstanceOf(ApiException.class);
-
-            // 8) 只传仓库：创建 repository；WAITING_RETRY → RUNNING 重试成功
+            // 9) 只传仓库：创建 repository
             TaskResponse repoOnly = taskService.createTask(project.getId(),
                     new CreateTaskRequest(null, "https://github.com/paperpilot/patchtst", null, "req-repo"));
             AnalysisTask repoTask = taskMapper.selectById(repoOnly.taskId());
@@ -136,13 +146,40 @@ class AnalysisTaskServicePersistenceTest {
             assertThat(repositoryMapper.selectById(repoTask.getRepositoryId()).getGithubUrl())
                     .isEqualTo("https://github.com/paperpilot/patchtst");
 
+            // 10) 人工重试：FAILED → QUEUED；失败阶段重置为 PENDING、清空调度信息、保留 attempt
+            AnalysisTask failedTask = taskMapper.selectById(repoOnly.taskId());
+            failedTask.setStatus(TaskStatus.FAILED);
+            taskMapper.updateById(failedTask);
+            StageExecution failedStage = stageService.listByTask(repoOnly.taskId()).stream()
+                    .filter(s -> s.getStage() == TaskStage.CLONE_REPOSITORY)
+                    .findFirst().orElseThrow();
+            failedStage.setStatus(StageExecutionStatus.FAILED);
+            failedStage.setErrorSnapshot("{\"schemaVersion\":1}");
+            failedStage.setStartedAt(LocalDateTime.of(2026, 8, 4, 12, 0, 0));
+            failedStage.setNextRetryAt(LocalDateTime.of(2026, 8, 4, 12, 30, 0));
+            stageExecutionMapper.updateById(failedStage);
+            Integer attempt = failedStage.getAttempt();
+
+            TaskDetailResponse retried = taskService.retry(repoOnly.taskId());
+            assertThat(retried.status()).isEqualTo("QUEUED");
+            assertThat(taskMapper.selectById(repoOnly.taskId()).getStatus()).isEqualTo(TaskStatus.QUEUED);
+            StageExecution resetStage = stageExecutionMapper.selectById(failedStage.getId());
+            assertThat(resetStage.getStatus()).isEqualTo(StageExecutionStatus.PENDING);
+            assertThat(resetStage.getAttempt()).isEqualTo(attempt);
+            assertThat(resetStage.getErrorSnapshot()).isNull();
+            assertThat(resetStage.getStartedAt()).isNull();
+            assertThat(resetStage.getNextRetryAt()).isNull();
+
+            // 11) WAITING_RETRY 不可人工重试（仅 FAILED）→ ILLEGAL_TASK_TRANSITION
             AnalysisTask waiting = taskMapper.selectById(repoOnly.taskId());
             waiting.setStatus(TaskStatus.WAITING_RETRY);
             taskMapper.updateById(waiting);
-            TaskDetailResponse retried = taskService.retry(repoOnly.taskId());
-            assertThat(retried.status()).isEqualTo("RUNNING");
+            assertThatThrownBy(() -> taskService.retry(repoOnly.taskId()))
+                    .isInstanceOf(ApiException.class)
+                    .extracting(e -> ((ApiException) e).getCode())
+                    .isEqualTo(ErrorCode.ILLEGAL_TASK_TRANSITION.getCode());
 
-            // 9) 文件+仓库都传：paper 与 repository 都建立
+            // 12) 文件+仓库都传：paper 与 repository 都建立
             TaskResponse both = taskService.createTask(project.getId(),
                     new CreateTaskRequest(file.getId(), "https://github.com/paperpilot/patchtst", null, "req-both"));
             AnalysisTask bothTask = taskMapper.selectById(both.taskId());

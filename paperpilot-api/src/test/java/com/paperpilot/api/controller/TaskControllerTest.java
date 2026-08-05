@@ -102,14 +102,14 @@ class TaskControllerTest {
         when(analysisTaskService.cancel(7L))
                 .thenReturn(new TaskDetailResponse(7L, 1L, null, null, null, "CANCELLED", "k", null, null));
         when(analysisTaskService.retry(7L))
-                .thenReturn(new TaskDetailResponse(7L, 1L, null, null, null, "RUNNING", "k", null, null));
+                .thenReturn(new TaskDetailResponse(7L, 1L, null, null, null, "QUEUED", "k", null, null));
 
         mockMvc.perform(post("/api/v1/tasks/7/cancel"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CANCELLED"));
         mockMvc.perform(post("/api/v1/tasks/7/retry"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("RUNNING"));
+                .andExpect(jsonPath("$.data.status").value("QUEUED"));
     }
 
     @Test

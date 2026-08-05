@@ -10,14 +10,15 @@ import java.util.Set;
 /**
  * 任务状态机 — 所有任务状态迁移必须经过本类校验（Java 侧控制）.
  *
- * <p>允许的迁移：
+ * <p>允许的迁移（唯一迁移规则，编排器/服务层不得另建迁移表）：
  * <pre>
- * PENDING → QUEUED → RUNNING → SUCCEEDED
- *                        ├──→ WAITING_RETRY → RUNNING
- *                        ├──→ FAILED
- *                        └──→ CANCELLED
+ * PENDING       → QUEUED | CANCELLED
+ * QUEUED        → RUNNING | CANCELLED
+ * RUNNING       → WAITING_RETRY | SUCCEEDED | FAILED | CANCELLED
+ * WAITING_RETRY → QUEUED | CANCELLED        （自动重试必须先回 QUEUED 再经队列执行）
+ * FAILED        → QUEUED                    （仅人工重试）
  * </pre>
- * 终态（SUCCEEDED / FAILED / CANCELLED）没有出边；其余非法迁移抛出
+ * 终态（SUCCEEDED / CANCELLED）没有出边，不可恢复；其余非法迁移抛出
  * {@link IllegalStateException}。
  */
 public final class TaskStateMachine {
@@ -26,12 +27,13 @@ public final class TaskStateMachine {
     private static final Map<TaskStatus, Set<TaskStatus>> ALLOWED = new EnumMap<>(TaskStatus.class);
 
     static {
-        ALLOWED.put(TaskStatus.PENDING, EnumSet.of(TaskStatus.QUEUED));
-        ALLOWED.put(TaskStatus.QUEUED, EnumSet.of(TaskStatus.RUNNING));
+        ALLOWED.put(TaskStatus.PENDING, EnumSet.of(TaskStatus.QUEUED, TaskStatus.CANCELLED));
+        ALLOWED.put(TaskStatus.QUEUED, EnumSet.of(TaskStatus.RUNNING, TaskStatus.CANCELLED));
         ALLOWED.put(TaskStatus.RUNNING, EnumSet.of(
                 TaskStatus.SUCCEEDED, TaskStatus.WAITING_RETRY, TaskStatus.FAILED, TaskStatus.CANCELLED));
-        ALLOWED.put(TaskStatus.WAITING_RETRY, EnumSet.of(TaskStatus.RUNNING));
-        // SUCCEEDED / FAILED / CANCELLED 为终态，无出边，故不注册
+        ALLOWED.put(TaskStatus.WAITING_RETRY, EnumSet.of(TaskStatus.QUEUED, TaskStatus.CANCELLED));
+        ALLOWED.put(TaskStatus.FAILED, EnumSet.of(TaskStatus.QUEUED));
+        // SUCCEEDED / CANCELLED 为不可恢复终态，无出边，故不注册
     }
 
     private TaskStateMachine() {

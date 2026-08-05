@@ -1,6 +1,7 @@
 package com.paperpilot.api.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.paperpilot.api.domain.entity.StageExecution;
 import com.paperpilot.api.domain.enums.StageExecutionStatus;
 import com.paperpilot.api.domain.enums.TaskStage;
@@ -46,6 +47,34 @@ public class StageExecutionService {
                 new LambdaQueryWrapper<StageExecution>()
                         .eq(StageExecution::getTaskId, taskId)
                         .orderByAsc(StageExecution::getId));
+    }
+
+    /**
+     * 任务取消时同步处理尚未执行的阶段：把 PENDING / WAITING_RETRY 阶段标记为
+     * CANCELLED。条件更新（WHERE status IN ...）保证只影响尚未开始的阶段，
+     * RUNNING 阶段由执行侧自行中止，避免与消费并发互相覆盖。
+     */
+    public void cancelPendingStages(Long taskId) {
+        stageExecutionMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
+                .eq(StageExecution::getTaskId, taskId)
+                .in(StageExecution::getStatus, StageExecutionStatus.PENDING, StageExecutionStatus.WAITING_RETRY)
+                .set(StageExecution::getStatus, StageExecutionStatus.CANCELLED));
+    }
+
+    /**
+     * 人工重试（FAILED → QUEUED）：把失败阶段重置为 PENDING 并清空错误快照与
+     * 调度时间（started/finished/next_retry/heartbeat），保留历史 attempt 数。
+     */
+    public void resetForRetry(Long taskId) {
+        stageExecutionMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
+                .eq(StageExecution::getTaskId, taskId)
+                .eq(StageExecution::getStatus, StageExecutionStatus.FAILED)
+                .set(StageExecution::getStatus, StageExecutionStatus.PENDING)
+                .set(StageExecution::getErrorSnapshot, null)
+                .set(StageExecution::getStartedAt, null)
+                .set(StageExecution::getFinishedAt, null)
+                .set(StageExecution::getNextRetryAt, null)
+                .set(StageExecution::getHeartbeatAt, null));
     }
 
     /** 列出任务阶段并转为响应 DTO。 */

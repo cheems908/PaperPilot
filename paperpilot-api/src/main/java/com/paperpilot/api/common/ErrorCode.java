@@ -11,6 +11,7 @@ public enum ErrorCode {
     BAD_REQUEST(400, "请求参数错误"),
     NOT_FOUND(404, "资源不存在"),
     CONFLICT(409, "状态冲突"),
+    ILLEGAL_TASK_TRANSITION(409, "非法任务状态迁移"),
     INTERNAL(500, "服务器内部错误");
 
     private final int code;
