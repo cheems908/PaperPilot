@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  统一 requestId 链路：控制台日志输出 MDC 中的 requestId（%X{requestId}）。
+  非 HTTP 线程（定时任务/SSE 异步推送）无 MDC 值，显示 [-]。
+-->
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%thread] %X{requestId:-} %logger{39} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>
