@@ -36,6 +36,9 @@ public class AnalysisTask {
     /** 任务总状态，迁移必须经 {@code TaskStateMachine} 校验 */
     private TaskStatus status;
 
+    /** 任务完成时间（终态时记录，未完成时为 null） */
+    private LocalDateTime finishedAt;
+
     @TableField(insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;
 
