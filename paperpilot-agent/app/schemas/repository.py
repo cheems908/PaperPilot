@@ -3,8 +3,9 @@ from pydantic import BaseModel
 
 
 class CloneOutput(BaseModel):
-    repo: str
-    commit: str
+    canonicalUrl: str
+    commitSha: str
+    workspaceRef: str
 
 
 class IndexOutput(BaseModel):

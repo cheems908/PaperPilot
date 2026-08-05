@@ -18,6 +18,14 @@ class Settings(BaseSettings):
     grobid_timeout_seconds: float = 30.0
     grobid_max_retries: int = 2
 
+    # 仓库克隆（T3-03）
+    workspace_root: str = "./data/workspaces"
+    clone_timeout_seconds: float = 60.0
+    max_repo_bytes: int = 200 * 1024 * 1024  # 200MB
+    max_repo_files: int = 10000
+    max_file_bytes: int = 20 * 1024 * 1024  # 20MB
+    max_concurrent_clones: int = 2
+
     model_config = SettingsConfigDict(env_prefix="PAPERPILOT_", env_file=".env", extra="ignore")
 
 
