@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paperpilot.api.domain.entity.AnalysisTask;
 import com.paperpilot.api.domain.entity.File;
+import com.paperpilot.api.domain.entity.GitRepository;
 import com.paperpilot.api.domain.entity.Project;
 import com.paperpilot.api.domain.entity.StageExecution;
 import com.paperpilot.api.domain.enums.StageExecutionStatus;
@@ -13,6 +14,7 @@ import com.paperpilot.api.dto.mq.StageTaskMessage;
 import com.paperpilot.api.dto.task.TaskResultResponse;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
 import com.paperpilot.api.mapper.FileMapper;
+import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.mq.StageMessageConsumer;
@@ -90,6 +92,8 @@ class StageFlowIntegrationTest {
     @Autowired
     FileMapper fileMapper;
     @Autowired
+    GitRepositoryMapper repositoryMapper;
+    @Autowired
     TaskResultService taskResultService;
 
     @BeforeAll
@@ -122,7 +126,8 @@ class StageFlowIntegrationTest {
         Project project = insertProject();
         File file = insertFile();
 
-        MvcResultLite result = postCreateTask(project.getId(), file.getId(), "req-e2e");
+        MvcResultLite result = postCreateTask(project.getId(), file.getId(),
+                "https://github.com/paperpilot/patchtst", "req-e2e");
         assertThat(result.status).isEqualTo(202);
         assertThat(result.statusField).isEqualTo("QUEUED");
 
@@ -140,8 +145,8 @@ class StageFlowIntegrationTest {
                         TaskStage.INDEX_CODE, TaskStage.MAP_CONCEPTS);
         assertThat(stages).allMatch(s -> s.getStatus() == StageExecutionStatus.SUCCEEDED);
         // 每个阶段输出快照已落库（结果从 MySQL 查询一致）
-        assertThat(stages).allMatch(s -> s.getOutputSnapshot() != null
-                && s.getOutputSnapshot().contains("fake-1.0.0"));
+        assertThat(stages).allMatch(s -> s.getOutputSnapshot() != null);
+        assertThat(stageBy(taskId, TaskStage.INDEX_CODE).getOutputSnapshot()).contains("symbolCount");
         // 假 Worker 对每个 stageExecutionId 恰好执行一次
         for (StageExecution s : stages) {
             assertThat(FAKE_WORKER.executionCount(s.getId())).as("stage %s", s.getStage()).isEqualTo(1);
@@ -198,7 +203,8 @@ class StageFlowIntegrationTest {
     void completedResultsQueryableAfterRestart() throws Exception {
         Project project = insertProject();
         File file = insertFile();
-        MvcResultLite result = postCreateTask(project.getId(), file.getId(), "req-restart");
+        MvcResultLite result = postCreateTask(project.getId(), file.getId(),
+                "https://github.com/paperpilot/patchtst", "req-restart");
         long taskId = result.taskId;
         awaitUntilTrue(() -> taskMapper.selectById(taskId).getStatus() == TaskStatus.SUCCEEDED, Duration.ofSeconds(15));
 
@@ -213,9 +219,13 @@ class StageFlowIntegrationTest {
 
     // ── helpers ──────────────────────────────────────────────────────────
 
-    private MvcResultLite postCreateTask(long projectId, long fileId, String requestKey) throws Exception {
+    private MvcResultLite postCreateTask(long projectId, long fileId, String githubUrl,
+                                         String requestKey) throws Exception {
         MvcResultLite out = new MvcResultLite();
-        var body = MAPPER.createObjectNode().put("fileId", fileId).put("requestKey", requestKey);
+        var body = MAPPER.createObjectNode()
+                .put("fileId", fileId)
+                .put("githubUrl", githubUrl)
+                .put("requestKey", requestKey);
         mockMvc.perform(post("/api/v1/projects/{projectId}/analysis-tasks", projectId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body.toString()))
@@ -236,8 +246,15 @@ class StageFlowIntegrationTest {
         project.setName("p");
         projectMapper.insert(project);
 
+        // INDEX_CODE 阶段会把符号持久化到 code_symbol（依赖 repository_id），故任务需带仓库
+        GitRepository repo = new GitRepository();
+        repo.setProjectId(project.getId());
+        repo.setGithubUrl("https://github.com/paperpilot/patchtst");
+        repositoryMapper.insert(repo);
+
         AnalysisTask task = new AnalysisTask();
         task.setProjectId(project.getId());
+        task.setRepositoryId(repo.getId());
         task.setStatus(TaskStatus.RUNNING);
         task.setRequestKey("req-" + UUID.randomUUID());
         taskMapper.insert(task);

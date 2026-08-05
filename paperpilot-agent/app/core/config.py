@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     max_file_bytes: int = 20 * 1024 * 1024  # 20MB
     max_concurrent_clones: int = 2
 
+    # 代码索引（T3-04）
+    max_source_file_bytes: int = 2 * 1024 * 1024  # 单文件 2MB
+    max_parse_failure_ratio: float = 0.2  # 语法错误占比超过该阈值才终止阶段
+
     model_config = SettingsConfigDict(env_prefix="PAPERPILOT_", env_file=".env", extra="ignore")
 
 

@@ -7,6 +7,7 @@ import com.paperpilot.api.domain.TaskStateMachine;
 import com.paperpilot.api.domain.entity.AnalysisTask;
 import com.paperpilot.api.domain.entity.StageExecution;
 import com.paperpilot.api.domain.enums.StageExecutionStatus;
+import com.paperpilot.api.domain.enums.TaskStage;
 import com.paperpilot.api.domain.enums.TaskStatus;
 import com.paperpilot.api.dto.mq.StageTaskMessage;
 import com.paperpilot.api.dto.snapshot.StageErrorSnapshot;
@@ -57,6 +58,7 @@ public class StageOrchestrator {
     private final AnalysisTaskMapper taskMapper;
     private final StageExecutionMapper stageExecutionMapper;
     private final WorkerClient workerClient;
+    private final CodeSymbolPersistenceService codeSymbolPersistenceService;
     private final TransactionTemplate txTemplate;
 
     /** 幂等编排入口。 */
@@ -220,7 +222,10 @@ public class StageOrchestrator {
 
     /** 业务结果（output snapshot）与阶段 SUCCEEDED 同事务提交；失败不标 SUCCEEDED。 */
     private boolean saveSuccess(StageExecutionContext ctx, WorkerStageResponse response) {
-        String outputJson = buildOutputSnapshotJson(response);
+        // INDEX_CODE：符号幂等 upsert 到 code_symbol，snapshot 只存摘要（避免 TEXT 溢出）
+        String outputJson = ctx.stage().getStage() == TaskStage.INDEX_CODE
+                ? codeSymbolPersistenceService.persist(ctx.task().getRepositoryId(), response)
+                : buildOutputSnapshotJson(response);
         int updated = stageExecutionMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
                 .eq(StageExecution::getId, ctx.stage().getId())
                 .eq(StageExecution::getStatus, StageExecutionStatus.RUNNING)

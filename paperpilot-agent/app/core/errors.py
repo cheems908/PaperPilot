@@ -26,6 +26,10 @@ class StageErrorCode:
     CLONE_TIMEOUT = "CLONE_TIMEOUT"
     INVALID_WORKSPACE_REF = "INVALID_WORKSPACE_REF"
 
+    # 代码索引阶段（T3-04）
+    INVALID_INDEX_INPUT = "INVALID_INDEX_INPUT"
+    CODE_INDEX_FAILED = "CODE_INDEX_FAILED"
+
 
 class StageServiceError(Exception):
     """阶段服务异常：携带稳定错误码、可重试标记与面向客户端的安全消息。"""

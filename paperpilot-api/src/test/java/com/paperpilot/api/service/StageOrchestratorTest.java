@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -56,6 +57,8 @@ class StageOrchestratorTest {
     @Mock
     WorkerClient workerClient;
     @Mock
+    CodeSymbolPersistenceService codeSymbolPersistenceService;
+    @Mock
     TransactionTemplate txTemplate;
 
     StageOrchestrator orchestrator;
@@ -70,7 +73,8 @@ class StageOrchestratorTest {
 
     @BeforeEach
     void setUp() {
-        orchestrator = new StageOrchestrator(taskMapper, stageExecutionMapper, workerClient, txTemplate);
+        orchestrator = new StageOrchestrator(taskMapper, stageExecutionMapper, workerClient,
+                codeSymbolPersistenceService, txTemplate);
         // 让 mock 事务直接执行回调体（只测流程逻辑，事务语义由集成测试覆盖）。
         // lenient：提前返回的用例不会触及事务桩，避免 UnnecessaryStubbingException。
         lenient().when(txTemplate.execute(any(TransactionCallback.class))).thenAnswer(inv -> {
@@ -194,6 +198,24 @@ class StageOrchestratorTest {
     }
 
     // ── Worker 失败 / 结果落库失败 ──────────────────────────────────────
+
+    @Test
+    void indexStagePersistsSymbolsToCodeSymbolAndStoresSummary() {
+        AnalysisTask task = task(TaskStatus.RUNNING);
+        task.setRepositoryId(99L);
+        when(taskMapper.selectById(7L)).thenReturn(task);
+        when(stageExecutionMapper.selectById(34L))
+                .thenReturn(stage(34L, 7L, TaskStage.INDEX_CODE, 1, StageExecutionStatus.PENDING));
+        when(stageExecutionMapper.update(any(), any())).thenReturn(1);
+        when(workerClient.execute(any())).thenReturn(successResponse("0.1"));
+        when(codeSymbolPersistenceService.persist(any(), any())).thenReturn("{\"symbolCount\":5}");
+
+        StageExecutionResult r = orchestrator.orchestrate(message(7L, 34L, TaskStage.INDEX_CODE, 1));
+
+        assertThat(r.success()).isTrue();
+        // INDEX 阶段把符号委托给 code_symbol 持久化服务，且以任务 repositoryId 为键
+        verify(codeSymbolPersistenceService).persist(eq(99L), any());
+    }
 
     @Test
     void workerFailureWritesErrorSnapshotAndReturnsFailed() {

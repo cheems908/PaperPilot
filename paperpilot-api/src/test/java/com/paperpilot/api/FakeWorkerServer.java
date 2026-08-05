@@ -127,6 +127,15 @@ public final class FakeWorkerServer implements AutoCloseable {
     }
 
     private static String stageResponse(String stage) {
+        if ("INDEX_CODE".equals(stage)) {
+            // INDEX 阶段输出必须是合法 IndexResult（含 commitSha），Java 侧幂等 upsert 到 code_symbol
+            return "{\"schemaVersion\":1,\"success\":true,"
+                    + "\"output\":{\"repo\":\"https://github.com/paperpilot/patchtst\","
+                    + "\"commitSha\":\"" + "f".repeat(40) + "\","
+                    + "\"files\":[],\"warnings\":[],"
+                    + "\"stats\":{\"fileCount\":0,\"symbolCount\":0,\"warningCount\":0}},"
+                    + "\"artifacts\":[],\"metrics\":{},\"workerVersion\":\"fake-1.0.0\"}";
+        }
         return "{\"schemaVersion\":1,\"success\":true,"
                 + "\"output\":{\"stage\":\"" + stage + "\",\"ok\":true},"
                 + "\"artifacts\":[],\"metrics\":{},\"workerVersion\":\"fake-1.0.0\"}";
