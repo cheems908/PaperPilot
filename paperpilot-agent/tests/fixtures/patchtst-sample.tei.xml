@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>A Time Series is Worth 64 Words</title>
+        <author><persName>Yuqi Nie</persName></author>
+        <author><persName>Nam H. Nguyen</persName></author>
+      </titleStmt>
+      <publicationStmt><p>Fake TEI fixture for tests</p></publicationStmt>
+    </fileDesc>
+    <profileDesc>
+      <abstract>
+        <p>Long-term time series forecasting is a critical task across many domains.</p>
+      </abstract>
+    </profileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div>
+        <head>1 Introduction</head>
+        <p>Time series are ubiquitous in real-world applications.</p>
+        <p>We propose PatchTST, a model based on patching and channel independence.</p>
+      </div>
+      <div>
+        <head>2 Method</head>
+        <p>The model splits time series into patches.</p>
+      </div>
+      <div>
+        <head>3 Experiments</head>
+        <p>We evaluate on eight real-world datasets.</p>
+      </div>
+    </body>
+  </text>
+</TEI>

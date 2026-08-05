@@ -6,8 +6,8 @@ from app.main import app
 
 client = TestClient(app)
 
+# PARSE_PAPER 已接入真实解析（见 test_internal_paper_api.py），此处覆盖其余三个确定性接口
 STAGE_ENDPOINTS = [
-    ("/internal/v1/papers/parse", "PARSE_PAPER"),
     ("/internal/v1/repositories/clone", "CLONE_REPOSITORY"),
     ("/internal/v1/repositories/index", "INDEX_CODE"),
     ("/internal/v1/mappings/generate", "MAP_CONCEPTS"),
@@ -49,9 +49,9 @@ def test_four_stage_endpoints_return_valid_schema():
 
 
 def test_same_input_repeated_is_identical():
-    payload = _payload("PARSE_PAPER")
-    a = client.post("/internal/v1/papers/parse", json=payload)
-    b = client.post("/internal/v1/papers/parse", json=payload)
+    payload = _payload("CLONE_REPOSITORY")
+    a = client.post("/internal/v1/repositories/clone", json=payload)
+    b = client.post("/internal/v1/repositories/clone", json=payload)
     assert a.status_code == 200
     assert a.json() == b.json()
 

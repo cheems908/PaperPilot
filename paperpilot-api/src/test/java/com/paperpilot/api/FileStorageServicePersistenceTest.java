@@ -56,10 +56,12 @@ class FileStorageServicePersistenceTest {
             assertThat(resp.fileName()).isEqualTo("PatchTST.pdf");
             assertThat(resp.fileId()).isNotNull();
 
-            // 落盘：storagePath 存在且内容一致
+            // 落盘：storagePath 为相对 storage root 的逻辑路径，解析后存在且内容一致
             File record = fileMapper.selectById(resp.fileId());
             assertThat(record.getStoragePath()).isNotNull();
-            java.io.File stored = new java.io.File(record.getStoragePath());
+            assertThat(record.getStoragePath()).isEqualTo(expectedSha + ".pdf");
+            assertThat(Path.of(record.getStoragePath()).isAbsolute()).isFalse();
+            java.io.File stored = tempDir.resolve(record.getStoragePath()).toFile();
             assertThat(stored).exists();
             assertThat(java.nio.file.Files.readAllBytes(stored.toPath())).isEqualTo(bytes);
 

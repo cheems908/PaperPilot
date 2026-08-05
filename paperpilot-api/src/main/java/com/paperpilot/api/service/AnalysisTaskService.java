@@ -87,6 +87,7 @@ public class AnalysisTaskService {
         Long sourceFileId = null;
         Long paperId = null;
         String paperStoragePath = null;
+        String paperSha256 = null;
         if (hasFile) {
             File file = fileMapper.selectById(req.fileId());
             if (file == null) {
@@ -94,6 +95,7 @@ public class AnalysisTaskService {
             }
             sourceFileId = file.getId();
             paperStoragePath = file.getStoragePath();
+            paperSha256 = file.getSha256();
             paperId = createPaperFromFile(projectId, file);
         }
 
@@ -125,7 +127,7 @@ public class AnalysisTaskService {
         if (paperId != null && paperStoragePath != null) {
             StageInputSnapshot input = new StageInputSnapshot(
                     StageSnapshotContract.SCHEMA_VERSION, task.getId(), TaskStage.PARSE_PAPER,
-                    new StageResourceRef(sourceFileId, paperStoragePath));
+                    new StageResourceRef(sourceFileId, paperStoragePath, paperSha256));
             try {
                 stageExecutionService.writeFirstStageInput(task.getId(), input);
             } catch (JsonProcessingException e) {

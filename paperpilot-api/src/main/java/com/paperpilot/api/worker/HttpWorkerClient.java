@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.paperpilot.api.domain.enums.TaskStage;
+import com.paperpilot.api.dto.worker.WorkerErrorResponse;
 import com.paperpilot.api.dto.worker.WorkerStageRequest;
 import com.paperpilot.api.dto.worker.WorkerStageResponse;
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.net.SocketTimeoutException;
 import java.net.http.HttpClient;
@@ -91,11 +93,9 @@ public class HttpWorkerClient implements WorkerClient {
                     stage, path, elapsedMs(start), e.getErrorCode());
             throw e;
         } catch (HttpClientErrorException e) {
-            throw new WorkerException(WorkerErrorCode.HTTP_4XX, e.getStatusCode().value(),
-                    "worker 4xx: " + e.getStatusCode(), e);
+            throw errorFrom(WorkerErrorCode.HTTP_4XX, e.getStatusCode().value(), e);
         } catch (HttpServerErrorException e) {
-            throw new WorkerException(WorkerErrorCode.HTTP_5XX, e.getStatusCode().value(),
-                    "worker 5xx: " + e.getStatusCode(), e);
+            throw errorFrom(WorkerErrorCode.HTTP_5XX, e.getStatusCode().value(), e);
         } catch (ResourceAccessException e) {
             if (isTimeout(e)) {
                 throw new WorkerException(WorkerErrorCode.TIMEOUT, 0, "worker 超时", e);
@@ -113,6 +113,28 @@ public class HttpWorkerClient implements WorkerClient {
         } catch (JsonProcessingException e) {
             throw new WorkerException(WorkerErrorCode.INVALID_RESPONSE, status,
                     "非法 JSON 响应: " + e.getMessage(), e);
+        }
+    }
+
+    /** 4xx/5xx：解析远端统一错误体，把 errorCode/retryable 透传到 {@link WorkerException}。 */
+    private WorkerException errorFrom(WorkerErrorCode code, int status, RestClientResponseException e) {
+        WorkerErrorResponse err = parseErrorBody(e.getResponseBodyAsByteArray());
+        if (err != null && err.errorCode() != null) {
+            boolean retryable = err.retryable() != null ? err.retryable() : code.isRetryable();
+            String message = err.message() != null ? err.message() : "worker error " + status;
+            return new WorkerException(code, status, err.errorCode(), retryable, message, e);
+        }
+        return new WorkerException(code, status, "worker " + status + ": " + e.getStatusCode(), e);
+    }
+
+    private WorkerErrorResponse parseErrorBody(byte[] body) {
+        if (body == null || body.length == 0) {
+            return null;
+        }
+        try {
+            return MAPPER.readValue(body, WorkerErrorResponse.class);
+        } catch (Exception e) {
+            return null; // 错误体非统一 JSON：忽略，回退到状态码分类
         }
     }
 

@@ -74,7 +74,8 @@ public class FileStorageService {
         record.setFileName(originalName);
         record.setSha256(sha256);
         record.setSize((long) bytes.length);
-        record.setStoragePath(target.getAbsolutePath());
+        // 相对 storage root 的逻辑路径（Worker 用 PAPERPILOT_STORAGE_ROOT 解析并校验）
+        record.setStoragePath(target.getName());
         fileMapper.insert(record);
 
         return new FileUploadResponse(record.getId(), originalName, sha256, (long) bytes.length);

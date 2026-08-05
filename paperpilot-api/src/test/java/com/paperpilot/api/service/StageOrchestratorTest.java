@@ -201,13 +201,14 @@ class StageOrchestratorTest {
         when(stageExecutionMapper.selectById(34L))
                 .thenReturn(stage(34L, 7L, TaskStage.PARSE_PAPER, 1, StageExecutionStatus.PENDING));
         when(stageExecutionMapper.update(any(), any())).thenReturn(1); // claim 成功
-        doThrow(new WorkerException(WorkerErrorCode.HTTP_5XX, 500, "boom"))
+        // 远端错误码 INVALID_PDF 透传到失败结果（而非笼统的 HTTP_5XX）
+        doThrow(new WorkerException(WorkerErrorCode.HTTP_5XX, 500, "INVALID_PDF", false, "not a pdf", null))
                 .when(workerClient).execute(any());
 
         StageExecutionResult r = orchestrator.orchestrate(message(7L, 34L, TaskStage.PARSE_PAPER, 1));
 
         assertThat(r.success()).isFalse();
-        assertThat(r.detail()).contains("HTTP_5XX");
+        assertThat(r.detail()).contains("INVALID_PDF").doesNotContain("HTTP_5XX");
         verify(stageExecutionMapper, times(2)).update(any(), any()); // claim + saveFailure
         // 任务已 RUNNING，仅 saveFailure 触发任务 RUNNING→FAILED 更新
         verify(taskMapper, times(1)).update(any(), any());

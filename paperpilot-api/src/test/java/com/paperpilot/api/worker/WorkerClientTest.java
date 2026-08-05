@@ -163,6 +163,44 @@ class WorkerClientTest {
                 });
     }
 
+    @Test
+    void http5xxPreservesRemoteErrorCodeAndRetryable() throws Exception {
+        server = new MockWebServer();
+        server.enqueue(new MockResponse().setResponseCode(500)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"schemaVersion\":1,\"success\":false,\"errorCode\":\"INVALID_PDF\","
+                        + "\"retryable\":false,\"message\":\"not a valid pdf\"}"));
+        server.start();
+
+        assertThatThrownBy(() -> client(server, Duration.ofSeconds(5))
+                .execute(request(TaskStage.PARSE_PAPER, "req-1", 1)))
+                .isInstanceOf(WorkerException.class)
+                .satisfies(e -> {
+                    WorkerException we = (WorkerException) e;
+                    assertThat(we.getErrorCode()).isEqualTo(WorkerErrorCode.HTTP_5XX);
+                    assertThat(we.getRemoteErrorCode()).isEqualTo("INVALID_PDF");
+                    assertThat(we.isRetryable()).isFalse(); // 远端 retryable 覆盖分类默认
+                    assertThat(we.getMessage()).contains("not a valid pdf");
+                });
+    }
+
+    @Test
+    void http4xxFallsBackToStatusCodeWhenBodyIsNotJson() throws Exception {
+        server = new MockWebServer();
+        server.enqueue(new MockResponse().setResponseCode(400).setBody("<html>bad request</html>"));
+        server.start();
+
+        assertThatThrownBy(() -> client(server, Duration.ofSeconds(5))
+                .execute(request(TaskStage.PARSE_PAPER, "req-1", 1)))
+                .isInstanceOf(WorkerException.class)
+                .satisfies(e -> {
+                    WorkerException we = (WorkerException) e;
+                    assertThat(we.getErrorCode()).isEqualTo(WorkerErrorCode.HTTP_4XX);
+                    assertThat(we.getRemoteErrorCode()).isNull();
+                    assertThat(we.isRetryable()).isFalse();
+                });
+    }
+
     // ── 非法响应 / 过大 / 缺失 output / 业务失败 ──────────────────────────
 
     @Test

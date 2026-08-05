@@ -8,8 +8,15 @@ class Settings(BaseSettings):
     app_name: str = "paperpilot-agent"
     simulate_failure: bool = False
     simulate_delay_ms: int = 0
-    # T3-02 GROBID 客户端使用
+
+    # 论文资源契约（T3-02）：storagePath 为相对 storage_root 的逻辑路径
+    storage_root: str = "./data/papers"
+    max_pdf_bytes: int = 50 * 1024 * 1024  # 50MB
+
+    # GROBID 客户端
     grobid_url: str = "http://localhost:8070"
+    grobid_timeout_seconds: float = 30.0
+    grobid_max_retries: int = 2
 
     model_config = SettingsConfigDict(env_prefix="PAPERPILOT_", env_file=".env", extra="ignore")
 

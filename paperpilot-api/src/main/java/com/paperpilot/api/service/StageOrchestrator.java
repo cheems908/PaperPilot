@@ -86,8 +86,11 @@ public class StageOrchestrator {
         try {
             response = workerClient.execute(buildRequest(ctx));
         } catch (WorkerException e) {
-            saveFailure(ctx, e.getErrorCode().name(), e.isRetryable(), e.getMessage());
-            return StageExecutionResult.failed(ctx, e.getErrorCode().name(), e.getMessage());
+            // 优先透传远端业务错误码（如 INVALID_PDF），缺省用 Java 分类
+            String errorCode = e.getRemoteErrorCode() != null
+                    ? e.getRemoteErrorCode() : e.getErrorCode().name();
+            saveFailure(ctx, errorCode, e.isRetryable(), e.getMessage());
+            return StageExecutionResult.failed(ctx, errorCode, e.getMessage());
         } catch (Exception e) {
             saveFailure(ctx, "UNKNOWN", false, e.getMessage());
             return StageExecutionResult.failed(ctx, "UNKNOWN", e.getMessage());
