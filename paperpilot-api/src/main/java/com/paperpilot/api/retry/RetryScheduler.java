@@ -17,7 +17,6 @@ import com.paperpilot.api.service.TaskEventService;
 import com.paperpilot.api.service.TaskEventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionStatus;
@@ -78,7 +77,6 @@ public class RetryScheduler {
         this.clock = clock;
     }
 
-    @Scheduled(fixedDelayString = "${paperpilot.retry.scan-interval:PT5S}")
     public void scanDueRetries() {
         LocalDateTime now = LocalDateTime.now(clock);
         List<StageExecution> due = stageMapper.selectList(new LambdaQueryWrapper<StageExecution>()

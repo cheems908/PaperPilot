@@ -8,6 +8,7 @@ public final class TaskEventType {
     public static final String STAGE_PROGRESS = "stage-progress";
     public static final String STAGE_COMPLETED = "stage-completed";
     public static final String STAGE_RETRYING = "stage-retrying";
+    public static final String STAGE_RECOVERED = "stage-recovered";
     public static final String TASK_COMPLETED = "task-completed";
     public static final String TASK_FAILED = "task-failed";
     public static final String TASK_CANCELLED = "task-cancelled";

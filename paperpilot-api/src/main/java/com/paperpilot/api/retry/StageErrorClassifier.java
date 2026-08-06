@@ -19,7 +19,8 @@ public class StageErrorClassifier {
             "WORKER_UNAVAILABLE",
             "GROBID_UNAVAILABLE",
             "GITHUB_TEMPORARY_FAILURE",
-            "LLM_RATE_LIMITED");
+            "LLM_RATE_LIMITED",
+            "EXECUTION_LEASE_EXPIRED");
 
     private static final Set<String> NON_RETRYABLE = Set.of(
             "INVALID_PDF",

@@ -19,6 +19,7 @@ import com.paperpilot.api.dto.worker.WorkerStageResponse;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.progress.TaskProgressService;
+import com.paperpilot.api.recovery.StageHeartbeatService;
 import com.paperpilot.api.retry.RetryPolicy;
 import com.paperpilot.api.retry.StageErrorClassifier;
 import com.paperpilot.api.retry.StageFailureOutcome;
@@ -68,6 +69,7 @@ public class StageOrchestrator {
     private final TaskEventService taskEventService;
     private final StageErrorClassifier errorClassifier;
     private final RetryPolicy retryPolicy;
+    private final StageHeartbeatService heartbeatService;
     private final TransactionTemplate txTemplate;
 
     /** 幂等编排入口。 */
@@ -101,8 +103,17 @@ public class StageOrchestrator {
                 new TaskEventPayload(TaskStatus.RUNNING.name(), stage.name(),
                         progressService.stageStart(stage), "开始阶段 " + stage));
 
+        if (cancelledAfterClaim(ctx)) {
+            cancelRunningStage(ctx);
+            return StageExecutionResult.skipped(ctx, "任务已取消，Worker 未调用");
+        }
+
         WorkerStageResponse response;
-        try {
+        try (StageHeartbeatService.HeartbeatLease ignored = heartbeatService.begin(ctx.stage().getId())) {
+            if (cancelledAfterClaim(ctx)) {
+                cancelRunningStage(ctx);
+                return StageExecutionResult.skipped(ctx, "任务已取消，Worker 未调用");
+            }
             response = workerClient.execute(buildRequest(ctx));
         } catch (WorkerException e) {
             // 优先透传远端业务错误码（如 INVALID_PDF），缺省用 Java 分类
@@ -116,6 +127,12 @@ public class StageOrchestrator {
             return StageExecutionResult.failed(ctx, "UNKNOWN", e.getMessage());
         }
 
+        // Worker 返回后再次以 MySQL 为准；取消优先时结果不得提交或推进。
+        if (cancelledAfterClaim(ctx)) {
+            cancelRunningStage(ctx);
+            return StageExecutionResult.skipped(ctx, "任务已取消，Worker 结果已丢弃");
+        }
+
         Boolean saved;
         try {
             saved = txTemplate.execute(tx -> saveSuccess(ctx, response));
@@ -125,6 +142,10 @@ public class StageOrchestrator {
             return StageExecutionResult.failed(ctx, "RESULT_SAVE_FAILED", "结果落库失败");
         }
         if (!Boolean.TRUE.equals(saved)) {
+            if (cancelledAfterClaim(ctx)) {
+                cancelRunningStage(ctx);
+                return StageExecutionResult.skipped(ctx, "取消赢得结果提交竞态");
+            }
             handleFailurePresentation(ctx, "RESULT_SAVE_FAILED", "阶段非 RUNNING，结果未落库");
             progressService.update(taskId, TaskStatus.FAILED, stage, 100, "结果落库失败");
             return StageExecutionResult.failed(ctx, "RESULT_SAVE_FAILED", "结果落库失败");
@@ -247,6 +268,11 @@ public class StageOrchestrator {
 
     /** 业务结果（output snapshot）与阶段 SUCCEEDED 同事务提交；失败不标 SUCCEEDED。 */
     private boolean saveSuccess(StageExecutionContext ctx, WorkerStageResponse response) {
+        // 与 cancel() 锁同一 task 行：先获得锁的一方决定结果提交/取消的合法顺序。
+        AnalysisTask lockedTask = taskMapper.selectByIdForUpdate(ctx.task().getId());
+        if (lockedTask == null || lockedTask.getStatus() != TaskStatus.RUNNING) {
+            return false;
+        }
         // INDEX_CODE：符号幂等 upsert 到 code_symbol；MAP_CONCEPTS：映射幂等写 concept_code_mapping；
         // 两者 snapshot 只存摘要（避免 TEXT 溢出）
         String outputJson = switch (ctx.stage().getStage()) {
@@ -290,6 +316,10 @@ public class StageOrchestrator {
         StageFailureOutcome outcome = saveFailure(ctx, errorCode, message);
         TaskStage stage = ctx.stage().getStage();
         Long taskId = ctx.task().getId();
+        if (taskMapper.selectById(taskId).getStatus() == TaskStatus.CANCELLED) {
+            cancelRunningStage(ctx);
+            return;
+        }
         if (outcome.retryScheduled()) {
             String display = "阶段将在 " + outcome.nextRetryAt() + " 重试: " + errorCode;
             progressService.update(taskId, TaskStatus.WAITING_RETRY, stage,
@@ -348,5 +378,19 @@ public class StageOrchestrator {
             log.error("保存阶段失败结果失败 stageExecutionId={}", ctx.stage().getId(), e);
             return StageFailureOutcome.terminal();
         }
+    }
+
+    private boolean cancelledAfterClaim(StageExecutionContext ctx) {
+        AnalysisTask current = taskMapper.selectById(ctx.task().getId());
+        return current == null || current.getStatus() == TaskStatus.CANCELLED;
+    }
+
+    /** 取消胜出后只收口当前 RUNNING 行，不覆盖任务终态。 */
+    private void cancelRunningStage(StageExecutionContext ctx) {
+        stageExecutionMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
+                .eq(StageExecution::getId, ctx.stage().getId())
+                .eq(StageExecution::getStatus, StageExecutionStatus.RUNNING)
+                .set(StageExecution::getStatus, StageExecutionStatus.CANCELLED)
+                .set(StageExecution::getFinishedAt, LocalDateTime.now()));
     }
 }

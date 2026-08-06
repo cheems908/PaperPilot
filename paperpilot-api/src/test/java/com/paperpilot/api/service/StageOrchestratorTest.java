@@ -18,6 +18,7 @@ import com.paperpilot.api.worker.WorkerException;
 import com.paperpilot.api.retry.RetryPolicy;
 import com.paperpilot.api.retry.RetryProperties;
 import com.paperpilot.api.retry.StageErrorClassifier;
+import com.paperpilot.api.recovery.StageHeartbeatService;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +72,8 @@ class StageOrchestratorTest {
     TransactionTemplate txTemplate;
     @Mock
     TransactionStatus transactionStatus;
+    @Mock
+    StageHeartbeatService heartbeatService;
 
     StageOrchestrator orchestrator;
 
@@ -87,7 +90,9 @@ class StageOrchestratorTest {
         orchestrator = new StageOrchestrator(taskMapper, stageExecutionMapper, workerClient,
                 codeSymbolPersistenceService, mappingPersistenceService, progressService,
                 taskEventService, new StageErrorClassifier(),
-                new RetryPolicy(new RetryProperties()), txTemplate);
+                new RetryPolicy(new RetryProperties()), heartbeatService, txTemplate);
+        lenient().when(heartbeatService.begin(any())).thenReturn(() -> { });
+        lenient().when(taskMapper.selectByIdForUpdate(any())).thenReturn(task(TaskStatus.RUNNING));
         // 让 mock 事务直接执行回调体（只测流程逻辑，事务语义由集成测试覆盖）。
         // lenient：提前返回的用例不会触及事务桩，避免 UnnecessaryStubbingException。
         lenient().when(txTemplate.execute(any(TransactionCallback.class))).thenAnswer(inv -> {

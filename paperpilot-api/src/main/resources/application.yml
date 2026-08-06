@@ -83,6 +83,14 @@ paperpilot:
     max-attempts: ${TASK_RETRY_MAX_ATTEMPTS:4}
     scan-batch-size: ${TASK_RETRY_SCAN_BATCH_SIZE:100}
     scan-interval: ${TASK_RETRY_SCAN_INTERVAL:PT5S}
+  # 服务重启恢复（T4-04）：MySQL 扫描 + Worker 调用期间执行心跳
+  recovery:
+    scheduling-enabled: ${TASK_RECOVERY_SCHEDULING_ENABLED:true}
+    scan-interval: ${TASK_RECOVERY_SCAN_INTERVAL:PT15S}
+    queued-timeout: ${TASK_RECOVERY_QUEUED_TIMEOUT:PT30S}
+    running-timeout: ${TASK_RECOVERY_RUNNING_TIMEOUT:PT2M}
+    heartbeat-interval: ${TASK_RECOVERY_HEARTBEAT_INTERVAL:PT20S}
+    batch-size: ${TASK_RECOVERY_BATCH_SIZE:100}
 
 # Actuator
 management:

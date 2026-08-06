@@ -12,3 +12,5 @@ spring:
 paperpilot:
   retry:
     scheduling-enabled: false
+  recovery:
+    scheduling-enabled: false

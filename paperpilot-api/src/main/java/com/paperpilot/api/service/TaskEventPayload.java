@@ -9,5 +9,10 @@ public record TaskEventPayload(
         @JsonProperty("status") String status,
         @JsonProperty("stage") String stage,
         @JsonProperty("progress") Integer progress,
-        @JsonProperty("message") String message) {
+        @JsonProperty("message") String message,
+        @JsonProperty("recoveryReason") String recoveryReason) {
+
+    public TaskEventPayload(String status, String stage, Integer progress, String message) {
+        this(status, stage, progress, message, null);
+    }
 }
