@@ -263,8 +263,11 @@ class StageFlowIntegrationTest {
         paper.setPdfUrl("http://example.com/paper.pdf");
         paperMapper.insert(paper);
 
+        File file = insertFile();
+
         AnalysisTask task = new AnalysisTask();
         task.setProjectId(project.getId());
+        task.setSourceFileId(file.getId());
         task.setRepositoryId(repo.getId());
         task.setPaperId(paper.getId());
         task.setStatus(TaskStatus.RUNNING);

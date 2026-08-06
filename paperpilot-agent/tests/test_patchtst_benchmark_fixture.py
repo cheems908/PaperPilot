@@ -5,6 +5,7 @@ from pathlib import Path
 
 import fitz
 import pytest
+from jsonschema import Draft202012Validator
 
 from tools.validate_patchtst_fixture import FIXTURE_DIR, FixtureValidationError, validate_fixture
 
@@ -24,6 +25,15 @@ def test_gold_ids_are_unique_and_boundary_cases_are_present():
     assert {"CONFIRMED", "AUXILIARY", "LOW_CONFIDENCE", "NO_EXPLICIT_IMPLEMENTATION"} <= certainties
     assert any(len(item["mappings"]) > 1 for item in gold["concepts"])
     assert any(not item["mappings"] for item in gold["concepts"])
+
+
+def test_benchmark_alignment_is_valid_complete_and_contains_no_production_ids():
+    alignment = json.loads((FIXTURE_DIR / "concept-alignment.json").read_text(encoding="utf-8"))
+    schema = json.loads((FIXTURE_DIR / "concept-alignment.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(alignment)
+    gold = json.loads((FIXTURE_DIR / "gold.json").read_text(encoding="utf-8"))
+    assert {item["goldId"] for item in alignment["concepts"]} == {item["id"] for item in gold["concepts"]}
+    assert not any(alias.startswith("pc_") for item in alignment["concepts"] for alias in item["aliases"])
 
 
 def test_validator_rejects_line_number_drift(tmp_path: Path):

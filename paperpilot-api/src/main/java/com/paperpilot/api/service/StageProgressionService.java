@@ -14,6 +14,7 @@ import com.paperpilot.api.domain.enums.TaskStatus;
 import com.paperpilot.api.dto.mq.StageTaskMessage;
 import com.paperpilot.api.dto.snapshot.StageSnapshotContract;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
+import com.paperpilot.api.mapper.FileMapper;
 import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.mq.StageMessageProducer;
@@ -49,6 +50,7 @@ public class StageProgressionService {
     private final AnalysisTaskMapper taskMapper;
     private final StageExecutionMapper stageExecutionMapper;
     private final GitRepositoryMapper repositoryMapper;
+    private final FileMapper fileMapper;
     private final StageMessageProducer stageMessageProducer;
     private final TaskProgressService progressService;
     private final TaskEventService taskEventService;
@@ -132,6 +134,14 @@ public class StageProgressionService {
         input.set("paper", paper);
         input.set("symbols", symbols);
         input.set("commitSha", index.path("commitSha"));
+        AnalysisTask task = taskMapper.selectById(taskId);
+        com.paperpilot.api.domain.entity.File sourceFile = task == null || task.getSourceFileId() == null
+                ? null : fileMapper.selectById(task.getSourceFileId());
+        if (sourceFile == null || sourceFile.getSha256() == null
+                || !sourceFile.getSha256().matches("^[0-9a-f]{64}$")) {
+            throw new IllegalStateException("MAP_CONCEPTS 缺少合法 paperSha256 taskId=" + taskId);
+        }
+        input.put("paperSha256", sourceFile.getSha256());
     }
 
     private JsonNode successfulOutputSummary(Long taskId, TaskStage stage) {

@@ -20,10 +20,12 @@ import com.paperpilot.api.mapper.ConceptCodeMappingMapper;
 import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.PaperConceptMapper;
 import com.paperpilot.api.mapper.PaperMapper;
+import com.paperpilot.api.dto.mapping.ConceptMentionDto;
+import com.paperpilot.api.dto.snapshot.StageSnapshotContract;
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,9 +40,6 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class TaskResultService {
-
-    /** 与规则版 Python 一致：总分 ≥ 该阈值视为 CANDIDATE */
-    private static final BigDecimal CANDIDATE_THRESHOLD = new BigDecimal("0.4");
 
     private final AnalysisTaskService analysisTaskService;
     private final StageExecutionService stageExecutionService;
@@ -101,17 +100,19 @@ public class TaskResultService {
                     if (symbol == null) {
                         continue;
                     }
-                    boolean candidate = m.getConfidence() != null
-                            && m.getConfidence().compareTo(CANDIDATE_THRESHOLD) >= 0;
-                    hasCandidate |= candidate;
+                    hasCandidate |= "VERIFIED".equals(m.getMappingStatus())
+                            || "CANDIDATE".equals(m.getMappingStatus());
                     candidates.add(new MappingCandidateResult(
                             symbol.getSymbolName(), symbol.getFilePath(), symbol.getLineNumber(),
-                            m.getConfidence(), candidate ? "CANDIDATE" : "NEEDS_REVIEW", m.getNotes()));
+                            symbol.getCommitSha(), m.getSemanticScore(), m.getSymbolScore(),
+                            m.getKeywordScore(), m.getDocumentationScore(), m.getVerificationScore(),
+                            m.getTotalScore(), m.getMappingStatus(), m.getDegraded(),
+                            m.getVerificationReason(), stringList(m.getMatchedTokensJson()), m.getCodeEvidence()));
                 }
-                if (!candidates.isEmpty()) {
-                    mappings.add(new MappingResult(concept.getConceptName(),
-                            concept.getEvidenceLocation(), concept.getEvidenceText(), candidates));
-                }
+                mappings.add(new MappingResult(concept.getConceptKey(), concept.getConceptName(),
+                        stringList(concept.getAliasesJson()), concept.getExtractorVersion(),
+                        mentions(concept.getMentionsJson()), concept.getDecision(), concept.getAbstentionReason(),
+                        concept.getEvidenceLocation(), concept.getEvidenceText(), candidates));
             }
             if (!mappings.isEmpty()) {
                 mappingStatus = hasCandidate ? "CANDIDATES" : "NEEDS_REVIEW";
@@ -124,5 +125,27 @@ public class TaskResultService {
 
     private String responseSnapshot(StageExecution stage) {
         return stage.getOutputSnapshot() != null ? stage.getOutputSnapshot() : stage.getSnapshot();
+    }
+
+    private List<String> stringList(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return StageSnapshotContract.MAPPER.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            throw new IllegalStateException("invalid persisted string list JSON", e);
+        }
+    }
+
+    private List<ConceptMentionDto> mentions(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return StageSnapshotContract.MAPPER.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            throw new IllegalStateException("invalid persisted mention JSON", e);
+        }
     }
 }

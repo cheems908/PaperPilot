@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "benchmarkId": "patchtst-iclr2023-v1",
+  "policy": "Human-curated paper terminology only; never supplied to production extraction or ranking.",
+  "concepts": [
+    {"goldId": "PT-01", "aliases": ["time series patching", "subseries-level patches", "patch-based time series representation"]},
+    {"goldId": "PT-02", "aliases": ["channel-independent patch time series Transformer", "channel-independent Transformer"]},
+    {"goldId": "PT-03", "aliases": ["patch projection", "linear projection", "learnable position encoding", "learnable positional encoding"]},
+    {"goldId": "PT-04", "aliases": ["Transformer encoder", "vanilla Transformer"]},
+    {"goldId": "PT-05", "aliases": ["multi-head self-attention", "multi-head attention", "multihead self attention"]},
+    {"goldId": "PT-06", "aliases": ["scaled dot-product attention", "residual attention"]},
+    {"goldId": "PT-07", "aliases": ["flatten head", "flatten layer with linear head", "linear forecasting head"]},
+    {"goldId": "PT-08", "aliases": ["instance normalization", "instance normalization and denormalization"]},
+    {"goldId": "PT-09", "aliases": ["masked patch pre-training", "masked pre-trained representation", "masked patch reconstruction"]},
+    {"goldId": "PT-10", "aliases": ["patch construction helper"]},
+    {"goldId": "PT-11", "aliases": ["series decomposition", "decomposition wrapper"]},
+    {"goldId": "PT-12", "aliases": ["MSE forecasting objective", "mean squared error objective", "MSE loss"]}
+  ]
+}

@@ -79,7 +79,10 @@ class ProjectServicePersistenceTest {
 
             PaperConcept concept = new PaperConcept();
             concept.setPaperId(paper.getId());
+            concept.setConceptKey("pc_0123456789abcdef01234567");
             concept.setConceptName("c");
+            concept.setExtractorVersion("test-v1");
+            concept.setDecision("MAPPED");
             paperConceptMapper.insert(concept);
 
             GitRepository repository = new GitRepository();

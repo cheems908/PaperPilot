@@ -1,0 +1,1228 @@
+{
+  "benchmarkId": "patchtst-iclr2023-v1",
+  "evaluations": [
+    {
+      "benchmarkId": "patchtst-iclr2023-v1",
+      "configuration": {
+        "mode": "rules+hash-embedding",
+        "modelVersion": "none",
+        "parameters": {
+          "embedding": "sha256-hash-64",
+          "topK": 5
+        },
+        "promptVersion": null,
+        "seed": 0
+      },
+      "denominators": {
+        "abstentionCases": 1,
+        "confirmedConcepts": 9,
+        "confirmedRelevantSymbols": 12,
+        "evaluatedCandidates": 140,
+        "matchedConfirmedConcepts": 8,
+        "stageDurations": 3
+      },
+      "errorSummary": {
+        "MULTI_FILE_OR_MULTI_SYMBOL_PARTIAL": 1,
+        "RIGHT_FILE_WRONG_SYMBOL": 2,
+        "SEMANTIC_OR_RULE_RETRIEVAL": 4,
+        "TERM_OR_CONCEPT_EXTRACTION": 1,
+        "UNRELATED_TOP_K_SYMBOL": 38
+      },
+      "errors": [
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|PatchTST_backbone.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/utils.py|LpLoss",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/utils/timefeatures.py|TimeFeature",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/utils/timefeatures.py|TimeFeature",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/utils/timefeatures.py|TimeFeature",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/preprocess_flow.py|dezip",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|PatchCB.set_patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|PatchMaskCB.patch_masking",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|create_patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Autoformer_EncDec.py|series_decomp.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Autoformer_EncDec.py|series_decomp.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "RIGHT_FILE_WRONG_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.__init__",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_layers.py|positional_encoding"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/learner.py|Learner.linear_probe",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/patchtst_finetune.py|linear_probe_func",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/tracking.py|TrackTrainingCB",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|Flatten_Head.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/layers/basics.py|Transpose.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Transformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Transformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Autoformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Autoformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/Pyraformer_LR.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "RIGHT_FILE_WRONG_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_MultiheadAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/SubLayers.py|MultiHeadAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|Flatten_Head",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/MultiWaveletCorrelation.py|MultiWaveletCross",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|ClassificationHead",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/PAM_TVM.py|PyramidalAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_ScaledDotProductAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|Flatten_Head",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/patchtst_finetune.py|linear_probe_func",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|ClassificationHead",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/learner.py|Learner.linear_probe",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._denormalize",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._normalize"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/tracking.py|TrackerCB",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Autoformer_EncDec.py|moving_avg.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Autoformer_EncDec.py|moving_avg.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_layers.py|moving_avg.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/models/DLinear.py|moving_avg.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "MULTI_FILE_OR_MULTI_SYMBOL_PARTIAL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|PretrainHead.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/tracking.py|TrackerCB",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/long_range_main.py|parse_args",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|random_masking_3D",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/models/PatchTST.py|Model.__init__",
+          "type": "FALSE_POSITIVE"
+        }
+      ],
+      "evaluationMode": "END_TO_END",
+      "label": "规则版算法",
+      "metricDefinitions": {
+        "abstentionAccuracy": "aligned NO_EXPLICIT_IMPLEMENTATION concepts explicitly ABSTAINED with reason and no candidates divided by abstention cases",
+        "conceptExtractionCoverage": "aligned CONFIRMED production concepts divided by CONFIRMED gold concepts",
+        "evidenceCompleteness": "candidates with paper location/text and commit/path/symbol/startLine divided by evaluated candidates",
+        "mrr": "mean reciprocal rank of the first relevant symbol over CONFIRMED concepts",
+        "needsReviewRatio": "NEEDS_REVIEW candidates divided by evaluated candidates",
+        "precisionAtK": "macro mean of relevant symbols in top K divided by K over CONFIRMED concepts",
+        "recallAtK": "macro mean of relevant symbols in top K divided by all gold symbols over CONFIRMED concepts"
+      },
+      "metrics": {
+        "abstentionAccuracy": 1.0,
+        "averageStageDurationMs": 1952.192,
+        "conceptExtractionCoverage": 0.888889,
+        "evidenceCompleteness": 1.0,
+        "llmTokens": 0,
+        "mrr": 0.092593,
+        "needsReviewRatio": 0.164286,
+        "precisionAt1": 0.0,
+        "precisionAt3": 0.074074,
+        "precisionAt5": 0.044444,
+        "recallAt1": 0.0,
+        "recallAt3": 0.166667,
+        "recallAt5": 0.166667
+      },
+      "schemaVersion": 1
+    },
+    {
+      "benchmarkId": "patchtst-iclr2023-v1",
+      "configuration": {
+        "mode": null,
+        "modelVersion": null,
+        "parameters": null,
+        "promptVersion": null,
+        "seed": null
+      },
+      "denominators": {
+        "abstentionCases": 1,
+        "confirmedConcepts": 9,
+        "confirmedRelevantSymbols": 12,
+        "evaluatedCandidates": 140,
+        "matchedConfirmedConcepts": 8,
+        "stageDurations": 0
+      },
+      "errorSummary": {
+        "MULTI_FILE_OR_MULTI_SYMBOL_PARTIAL": 1,
+        "RIGHT_FILE_WRONG_SYMBOL": 2,
+        "SEMANTIC_OR_RULE_RETRIEVAL": 4,
+        "TERM_OR_CONCEPT_EXTRACTION": 1,
+        "UNRELATED_TOP_K_SYMBOL": 38
+      },
+      "errors": [
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|PatchTST_backbone.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/utils.py|LpLoss",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/utils/timefeatures.py|TimeFeature",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/utils/timefeatures.py|TimeFeature",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/preprocess_flow.py|dezip",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/utils/timefeatures.py|TimeFeature",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Autoformer_EncDec.py|series_decomp.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Autoformer_EncDec.py|series_decomp.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|PatchCB.set_patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|create_patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|PatchMaskCB.patch_masking",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "RIGHT_FILE_WRONG_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.__init__",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_layers.py|positional_encoding"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/learner.py|Learner.linear_probe",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/patchtst_finetune.py|linear_probe_func",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/tracking.py|TrackTrainingCB",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/layers/basics.py|Transpose.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|Flatten_Head.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Autoformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Transformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Autoformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/Pyraformer_LR.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Transformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "RIGHT_FILE_WRONG_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_MultiheadAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/SubLayers.py|MultiHeadAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|ClassificationHead",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/PAM_TVM.py|PyramidalAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/MultiWaveletCorrelation.py|MultiWaveletCross",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|Flatten_Head",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_ScaledDotProductAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|Flatten_Head",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|ClassificationHead",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/patchtst_finetune.py|linear_probe_func",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/learner.py|Learner.linear_probe",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._denormalize",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._normalize"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/tracking.py|TrackerCB",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Autoformer_EncDec.py|moving_avg.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/models/DLinear.py|moving_avg.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Autoformer_EncDec.py|moving_avg.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_layers.py|moving_avg.forward",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "MULTI_FILE_OR_MULTI_SYMBOL_PARTIAL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|PretrainHead.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/long_range_main.py|parse_args",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/tracking.py|TrackerCB",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/models/PatchTST.py|Model.__init__",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|random_masking_3D",
+          "type": "FALSE_POSITIVE"
+        }
+      ],
+      "evaluationMode": "END_TO_END",
+      "label": "增强版最终API",
+      "metricDefinitions": {
+        "abstentionAccuracy": "aligned NO_EXPLICIT_IMPLEMENTATION concepts explicitly ABSTAINED with reason and no candidates divided by abstention cases",
+        "conceptExtractionCoverage": "aligned CONFIRMED production concepts divided by CONFIRMED gold concepts",
+        "evidenceCompleteness": "candidates with paper location/text and commit/path/symbol/startLine divided by evaluated candidates",
+        "mrr": "mean reciprocal rank of the first relevant symbol over CONFIRMED concepts",
+        "needsReviewRatio": "NEEDS_REVIEW candidates divided by evaluated candidates",
+        "precisionAtK": "macro mean of relevant symbols in top K divided by K over CONFIRMED concepts",
+        "recallAtK": "macro mean of relevant symbols in top K divided by all gold symbols over CONFIRMED concepts"
+      },
+      "metrics": {
+        "abstentionAccuracy": 1.0,
+        "averageStageDurationMs": null,
+        "conceptExtractionCoverage": 0.888889,
+        "evidenceCompleteness": 1.0,
+        "llmTokens": null,
+        "mrr": 0.092593,
+        "needsReviewRatio": 0.735714,
+        "precisionAt1": 0.0,
+        "precisionAt3": 0.074074,
+        "precisionAt5": 0.044444,
+        "recallAt1": 0.0,
+        "recallAt3": 0.166667,
+        "recallAt5": 0.166667
+      },
+      "schemaVersion": 1
+    },
+    {
+      "benchmarkId": "patchtst-iclr2023-v1",
+      "configuration": {
+        "mode": "oracle-concepts+retrieval",
+        "modelVersion": "deterministic-sha256-v1",
+        "parameters": {
+          "embedding": "sha256-hash-64",
+          "topK": 5
+        },
+        "promptVersion": "1",
+        "seed": 0
+      },
+      "denominators": {
+        "abstentionCases": 1,
+        "confirmedConcepts": 9,
+        "confirmedRelevantSymbols": 12,
+        "evaluatedCandidates": 55,
+        "matchedConfirmedConcepts": 9,
+        "stageDurations": 2
+      },
+      "errorSummary": {
+        "MULTI_FILE_OR_MULTI_SYMBOL_PARTIAL": 1,
+        "RIGHT_FILE_WRONG_SYMBOL": 3,
+        "SEMANTIC_OR_RULE_RETRIEVAL": 4,
+        "UNRELATED_TOP_K_SYMBOL": 43
+      },
+      "errors": [
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|PatchTST_backbone.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/tracking.py|TrackTimerCB.format_time",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|Patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|PatchCB.set_patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|create_patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|PatchMaskCB.patch_masking",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "RIGHT_FILE_WRONG_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/patchtst_supervised.py|find_lr",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/patchtst_pretrain.py|find_lr",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/embed.py|SingleStepEmbedding.transformer_embedding",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/patchtst_finetune.py|find_lr",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "MULTI_FILE_OR_MULTI_SYMBOL_PARTIAL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.__init__"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/layers/pos_encoding.py|positional_encoding",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|Patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/tracking.py|TrackTimerCB.after_epoch_train",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|PatchCB.set_patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Autoformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/Pyraformer_LR.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Autoformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Transformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/Transformer_EncDec.py|Encoder",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_MultiheadAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/SubLayers.py|MultiHeadAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/PAM_TVM.py|PyramidalAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/MultiWaveletCorrelation.py|MultiWaveletCross",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/Autoformer_EncDec.py|series_decomp_multi",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/Modules.py|ScaledDotProductAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "RIGHT_FILE_WRONG_SYMBOL",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_ScaledDotProductAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/Pyraformer/pyraformer/Modules.py|ScaledDotProductAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_ScaledDotProductAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/layers/attention.py|ScaledDotProductAttention",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/SelfAttention_Family.py|AttentionLayer",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/SelfAttention_Family.py|AttentionLayer",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|Flatten_Head",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|ClassificationHead",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/patchtst_finetune.py|linear_probe_func",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/learner.py|Learner.linear_probe",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "SEMANTIC_OR_RULE_RETRIEVAL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._denormalize",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._normalize"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/layers/heads.py|LinearRegressionHead",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/core.py|GetPredictionsCB",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/tracking.py|TrackerCB",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/utils/timefeatures.py|SecondOfMinute.__call__",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/utils/timefeatures.py|SecondOfMinute",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "RIGHT_FILE_WRONG_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|random_masking",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|PretrainHead.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|Patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/AutoCorrelation.py|AutoCorrelation.time_delay_agg_training",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|PatchCB.set_patch",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|PatchMaskCB.patch_masking",
+          "type": "FALSE_POSITIVE"
+        },
+        {
+          "category": "UNRELATED_TOP_K_SYMBOL",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "symbol": "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/Formers/FEDformer/layers/AutoCorrelation.py|AutoCorrelation.time_delay_agg_training",
+          "type": "FALSE_POSITIVE"
+        }
+      ],
+      "evaluationMode": "ORACLE_RETRIEVAL",
+      "label": "Oracle检索",
+      "metricDefinitions": {
+        "abstentionAccuracy": "aligned NO_EXPLICIT_IMPLEMENTATION concepts explicitly ABSTAINED with reason and no candidates divided by abstention cases",
+        "conceptExtractionCoverage": "aligned CONFIRMED production concepts divided by CONFIRMED gold concepts",
+        "evidenceCompleteness": "candidates with paper location/text and commit/path/symbol/startLine divided by evaluated candidates",
+        "mrr": "mean reciprocal rank of the first relevant symbol over CONFIRMED concepts",
+        "needsReviewRatio": "NEEDS_REVIEW candidates divided by evaluated candidates",
+        "precisionAtK": "macro mean of relevant symbols in top K divided by K over CONFIRMED concepts",
+        "recallAtK": "macro mean of relevant symbols in top K divided by all gold symbols over CONFIRMED concepts"
+      },
+      "metrics": {
+        "abstentionAccuracy": 1.0,
+        "averageStageDurationMs": 274.264,
+        "conceptExtractionCoverage": 1.0,
+        "evidenceCompleteness": 1.0,
+        "llmTokens": 0,
+        "mrr": 0.092593,
+        "needsReviewRatio": 0.963636,
+        "precisionAt1": 0.0,
+        "precisionAt3": 0.074074,
+        "precisionAt5": 0.044444,
+        "recallAt1": 0.0,
+        "recallAt3": 0.166667,
+        "recallAt5": 0.166667
+      },
+      "schemaVersion": 1
+    }
+  ],
+  "schemaVersion": 1
+}

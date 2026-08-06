@@ -19,13 +19,14 @@ def _normalise_term(value: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", value.casefold()))
 
 
-def _symbol_key(candidate: dict[str, Any], default_commit: str) -> str | None:
+def _symbol_key(candidate: dict[str, Any]) -> str | None:
     ref = candidate.get("symbolRef") if isinstance(candidate.get("symbolRef"), dict) else candidate
     path = ref.get("filePath")
     name = ref.get("qualifiedName") or ref.get("symbolName")
-    if not path or not name:
+    commit = ref.get("commitSha")
+    if not commit or not path or not name:
         return None
-    return f"{ref.get('commitSha') or default_commit}|{path}|{name}"
+    return f"{commit}|{path}|{name}"
 
 
 def _gold_symbol_key(mapping: dict[str, Any], commit: str) -> str:
@@ -53,28 +54,41 @@ def _candidates(concept: dict[str, Any]) -> list[dict[str, Any]]:
     return candidates if isinstance(candidates, list) else []
 
 
-def _find_prediction(gold_concept: dict[str, Any], predictions: list[dict[str, Any]]) -> dict[str, Any] | None:
-    concept_id = gold_concept["id"]
+def _alignment_terms(gold_concept: dict[str, Any], alignment: dict[str, Any] | None) -> set[str]:
+    terms = {gold_concept["concept"]}
+    if alignment:
+        entry = next((item for item in alignment.get("concepts", [])
+                      if item.get("goldId") == gold_concept["id"]), None)
+        if entry:
+            terms.update(entry.get("aliases") or [])
+    return {_normalise_term(term) for term in terms}
+
+
+def _find_prediction(gold_concept: dict[str, Any], predictions: list[dict[str, Any]],
+                     alignment: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    targets = _alignment_terms(gold_concept, alignment)
     for prediction in predictions:
-        if prediction.get("conceptId") == concept_id or prediction.get("id") == concept_id:
-            return prediction
-    target = _normalise_term(gold_concept["concept"])
-    for prediction in predictions:
-        term = prediction.get("term") or prediction.get("concept") or prediction.get("conceptName") or ""
-        if _normalise_term(str(term)) == target:
+        values = [prediction.get("term") or prediction.get("concept") or prediction.get("conceptName") or ""]
+        values.extend(prediction.get("aliases") or [])
+        if targets.intersection(_normalise_term(str(value)) for value in values):
             return prediction
     return None
 
 
 def _has_paper_evidence(concept: dict[str, Any]) -> bool:
+    mentions = concept.get("mentions") if isinstance(concept.get("mentions"), list) else []
+    anchored_mention = any(mention.get("evidenceText") and mention.get("paragraphId")
+                           and (mention.get("section") or mention.get("page") is not None)
+                           for mention in mentions if isinstance(mention, dict))
+    legacy_anchor = ((concept.get("section") or concept.get("source"))
+                     and (concept.get("page") is not None or concept.get("paragraphId")))
     return bool((concept.get("evidenceText") or concept.get("evidence"))
-                and (concept.get("section") or concept.get("source"))
-                and (concept.get("page") is not None or concept.get("paragraphId")))
+                and (anchored_mention or legacy_anchor))
 
 
-def _has_code_evidence(candidate: dict[str, Any], default_commit: str) -> bool:
+def _has_code_evidence(candidate: dict[str, Any], expected_commit: str) -> bool:
     ref = candidate.get("symbolRef") if isinstance(candidate.get("symbolRef"), dict) else candidate
-    return bool((ref.get("commitSha") or default_commit) and ref.get("filePath")
+    return bool(ref.get("commitSha") == expected_commit and ref.get("filePath")
                 and (ref.get("qualifiedName") or ref.get("symbolName"))
                 and isinstance(ref.get("startLine"), int) and ref["startLine"] > 0)
 
@@ -91,12 +105,13 @@ def _error_category(gold_concept: dict[str, Any], prediction: dict[str, Any] | N
     predicted_paths = {key.split("|", 2)[1] for key in predicted_keys}
     if relevant_paths.intersection(predicted_paths):
         return "RIGHT_FILE_WRONG_SYMBOL"
-    if any(not _has_code_evidence(candidate, "") for candidate in _candidates(prediction)):
+    if any(_symbol_key(candidate) is None for candidate in _candidates(prediction)):
         return "INDEX_OR_CODE_EVIDENCE_MISSING"
     return "SEMANTIC_OR_RULE_RETRIEVAL"
 
 
-def evaluate(gold: dict[str, Any], result: dict[str, Any], label: str | None = None) -> dict[str, Any]:
+def evaluate(gold: dict[str, Any], result: dict[str, Any], label: str | None = None,
+             alignment: dict[str, Any] | None = None) -> dict[str, Any]:
     """Evaluate one deterministic system export against a gold document."""
     predictions = _concepts(result)
     commit = gold["repository"]["commitSha"]
@@ -109,11 +124,11 @@ def evaluate(gold: dict[str, Any], result: dict[str, Any], label: str | None = N
 
     matched_predictions: list[dict[str, Any]] = []
     for concept in confirmed:
-        prediction = _find_prediction(concept, predictions)
+        prediction = _find_prediction(concept, predictions, alignment)
         if prediction is not None:
             matched_predictions.append(prediction)
         candidates = _candidates(prediction or {})
-        predicted_keys = [key for candidate in candidates if (key := _symbol_key(candidate, commit))]
+        predicted_keys = [key for candidate in candidates if (key := _symbol_key(candidate))]
         relevant = {_gold_symbol_key(mapping, commit) for mapping in concept["mappings"]}
         for k in KS:
             hits = len(relevant.intersection(predicted_keys[:k]))
@@ -143,7 +158,18 @@ def evaluate(gold: dict[str, Any], result: dict[str, Any], label: str | None = N
                    for concept in predictions for candidate in _candidates(concept))
     needs_review = sum(candidate.get("status") == "NEEDS_REVIEW" for candidate in evaluated_candidates)
     abstention_cases = [c for c in gold["concepts"] if c["certainty"] == ABSTENTION_CERTAINTY]
-    abstained = sum(not _candidates(_find_prediction(c, predictions) or {}) for c in abstention_cases)
+    abstained = 0
+    for concept in abstention_cases:
+        prediction = _find_prediction(concept, predictions, alignment)
+        if prediction is None:
+            errors.append({"conceptId": concept["id"], "concept": concept["concept"],
+                           "type": "FALSE_ABSTENTION", "category": "TERM_OR_CONCEPT_EXTRACTION"})
+        elif (prediction.get("decision") == "ABSTAINED" and not _candidates(prediction)
+              and bool(prediction.get("abstentionReason"))):
+            abstained += 1
+        else:
+            errors.append({"conceptId": concept["id"], "concept": concept["concept"],
+                           "type": "FALSE_ABSTENTION", "category": "IMPLICIT_OR_INVALID_ABSTENTION"})
     metadata = result.get("metadata") if isinstance(result.get("metadata"), dict) else {}
     durations = metadata.get("stageDurationsMs") or result.get("stageDurationsMs") or {}
     duration_values = [float(v) for v in durations.values()] if isinstance(durations, dict) else []
@@ -153,6 +179,7 @@ def evaluate(gold: dict[str, Any], result: dict[str, Any], label: str | None = N
         metrics[f"precisionAt{k}"] = round(precision_sum[k] / denominator, 6) if denominator else 0.0
         metrics[f"recallAt{k}"] = round(recall_sum[k] / denominator, 6) if denominator else 0.0
     metrics.update({
+        "conceptExtractionCoverage": round(len(matched_predictions) / denominator, 6) if denominator else 0.0,
         "mrr": round(reciprocal_rank_sum / denominator, 6) if denominator else 0.0,
         "evidenceCompleteness": round(complete / len(evaluated_candidates), 6) if evaluated_candidates else 0.0,
         "needsReviewRatio": round(needs_review / len(evaluated_candidates), 6) if evaluated_candidates else 0.0,
@@ -164,6 +191,7 @@ def evaluate(gold: dict[str, Any], result: dict[str, Any], label: str | None = N
         "schemaVersion": 1,
         "benchmarkId": gold["benchmarkId"],
         "label": label or metadata.get("label") or result.get("label") or "result",
+        "evaluationMode": metadata.get("evaluationMode") or result.get("evaluationMode") or "END_TO_END",
         "configuration": {
             key: metadata.get(key) for key in ("mode", "seed", "modelVersion", "promptVersion", "parameters")
         },
@@ -181,7 +209,8 @@ def evaluate(gold: dict[str, Any], result: dict[str, Any], label: str | None = N
             "mrr": "mean reciprocal rank of the first relevant symbol over CONFIRMED concepts",
             "evidenceCompleteness": "candidates with paper location/text and commit/path/symbol/startLine divided by evaluated candidates",
             "needsReviewRatio": "NEEDS_REVIEW candidates divided by evaluated candidates",
-            "abstentionAccuracy": "NO_EXPLICIT_IMPLEMENTATION concepts with no candidates divided by abstention cases",
+            "conceptExtractionCoverage": "aligned CONFIRMED production concepts divided by CONFIRMED gold concepts",
+            "abstentionAccuracy": "aligned NO_EXPLICIT_IMPLEMENTATION concepts explicitly ABSTAINED with reason and no candidates divided by abstention cases",
         },
         "metrics": metrics,
         "errorSummary": dict(sorted(Counter(error["category"] for error in errors).items())),
@@ -191,12 +220,13 @@ def evaluate(gold: dict[str, Any], result: dict[str, Any], label: str | None = N
 
 def render_markdown(evaluations: list[dict[str, Any]]) -> str:
     lines = ["# PatchTST 映射质量报告", "", "## 指标", "",
-             "| 版本 | P@1 | P@3 | P@5 | R@1 | R@3 | R@5 | MRR | 证据完整率 | NEEDS_REVIEW | 弃答准确率 |",
-             "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "| 版本 | 模式 | 概念覆盖率 | P@1 | P@3 | P@5 | R@1 | R@3 | R@5 | MRR | 证据完整率 | NEEDS_REVIEW | 弃答准确率 |",
+             "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for evaluation in evaluations:
         m = evaluation["metrics"]
         fmt = lambda value: "N/A" if value is None else f"{value:.4f}"
-        lines.append(f"| {evaluation['label']} | {fmt(m['precisionAt1'])} | {fmt(m['precisionAt3'])} | "
+        lines.append(f"| {evaluation['label']} | {evaluation['evaluationMode']} | "
+                     f"{fmt(m['conceptExtractionCoverage'])} | {fmt(m['precisionAt1'])} | {fmt(m['precisionAt3'])} | "
                      f"{fmt(m['precisionAt5'])} | {fmt(m['recallAt1'])} | {fmt(m['recallAt3'])} | "
                      f"{fmt(m['recallAt5'])} | {fmt(m['mrr'])} | {fmt(m['evidenceCompleteness'])} | "
                      f"{fmt(m['needsReviewRatio'])} | {fmt(m['abstentionAccuracy'])} |")
@@ -232,7 +262,7 @@ def render_markdown(evaluations: list[dict[str, Any]]) -> str:
             lines.append("- 未发现 Top-5 false positive/negative。")
         lines.append("")
     lines += ["## 下一步优化", "",
-              "- 让概念抽取输出稳定 conceptId 或基准别名，降低术语差异导致的概念对齐失败。",
+              "- 复合概念覆盖率达到门禁后，优先优化检索与重排，而非继续扩大抽取规则。",
               "- 对一对多和跨文件实现增加多样性召回，避免 Top-K 被同模块近义符号占满。",
               "- 将索引中的 docstring、父符号与调用关系用于重排，同时保持路径和行号只能来自 AST。",
               "- LLM 评估必须记录模型、promptVersion、参数和 token；缺失时报告 N/A，不作推测。", ""]

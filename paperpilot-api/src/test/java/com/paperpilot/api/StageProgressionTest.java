@@ -13,6 +13,7 @@ import com.paperpilot.api.dto.mq.StageTaskMessage;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
 import com.paperpilot.api.mapper.GitRepositoryMapper;
+import com.paperpilot.api.mapper.FileMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.mq.StageMessageProducer;
 import com.paperpilot.api.service.StageProgressionService;
@@ -65,6 +66,8 @@ class StageProgressionTest {
     ProjectMapper projectMapper;
     @Autowired
     GitRepositoryMapper repositoryMapper;
+    @Autowired
+    FileMapper fileMapper;
 
     @BeforeAll
     static void migrate() {
@@ -142,7 +145,8 @@ class StageProgressionTest {
         assertThat(stageBy(taskId, TaskStage.MAP_CONCEPTS).getInputSnapshot())
                 .contains("\"paper\":{\"title\":\"PatchTST\"")
                 .contains("\"symbols\":[{\"filePath\":\"model.py\"")
-                .contains("\"commitSha\":\"" + "b".repeat(40) + "\"");
+                .contains("\"commitSha\":\"" + "b".repeat(40) + "\"")
+                .contains("\"paperSha256\":\"" + "c".repeat(64) + "\"");
     }
 
     @Test
@@ -188,7 +192,14 @@ class StageProgressionTest {
         repositoryMapper.insert(repository);
 
         AnalysisTask task = new AnalysisTask();
+        com.paperpilot.api.domain.entity.File sourceFile = new com.paperpilot.api.domain.entity.File();
+        sourceFile.setFileName("paper.pdf");
+        sourceFile.setSha256("c".repeat(64));
+        sourceFile.setSize(10L);
+        sourceFile.setStoragePath("paper.pdf");
+        fileMapper.insert(sourceFile);
         task.setProjectId(project.getId());
+        task.setSourceFileId(sourceFile.getId());
         task.setRepositoryId(repository.getId());
         task.setStatus(TaskStatus.RUNNING);
         task.setRequestKey("req-" + UUID.randomUUID());

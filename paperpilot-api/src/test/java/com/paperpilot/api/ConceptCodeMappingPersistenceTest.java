@@ -97,6 +97,12 @@ class ConceptCodeMappingPersistenceTest {
                     .eq(ConceptCodeMapping::getConceptId, concept.getId()));
             assertThat(mapping.getCodeSymbolId()).isEqualTo(symbol.getId());
             assertThat(mapping.getConfidence()).isEqualByComparingTo("0.2");
+            assertThat(mapping.getSemanticScore()).isEqualByComparingTo("0.1");
+            assertThat(mapping.getVerificationScore()).isEqualByComparingTo("0.2");
+            assertThat(mapping.getMappingStatus()).isEqualTo("NEEDS_REVIEW");
+            assertThat(mapping.getDegraded()).isFalse();
+            assertThat(concept.getConceptKey()).isEqualTo("pc_111111111111111111111111");
+            assertThat(concept.getMentionsJson()).contains("paragraphId");
         }
     }
 
@@ -138,15 +144,22 @@ class ConceptCodeMappingPersistenceTest {
         Map<String, Object> output = new java.util.LinkedHashMap<>();
         output.put("commitSha", "f".repeat(40));
         output.put("concepts", List.of(Map.of(
+                "conceptId", "pc_111111111111111111111111",
                 "term", "channel independence", "source", "heading",
+                "extractorVersion", "compound-rule-v1", "decision", "MAPPED",
                 "evidenceText", "The model applies channel independence.",
-                "candidates", List.of(Map.of(
-                        "symbolRef", Map.of("filePath", "model.py", "qualifiedName", "PatchTST",
-                                "name", "PatchTST", "startLine", 5, "commitSha", "f".repeat(40)),
-                        "symbolScore", 0, "keywordScore", 0, "documentationScore", 1,
-                        "totalScore", 0.2, "status", "NEEDS_REVIEW",
-                        "matchedTokens", List.of("channel", "independence"),
-                        "codeEvidence", "docstring")))));
+                "candidates", List.of(Map.ofEntries(
+                        Map.entry("symbolRef", Map.of("filePath", "model.py", "qualifiedName", "PatchTST",
+                                "name", "PatchTST", "startLine", 5, "commitSha", "f".repeat(40))),
+                        Map.entry("semanticScore", 0.1), Map.entry("symbolScore", 0),
+                        Map.entry("keywordScore", 0), Map.entry("documentationScore", 1),
+                        Map.entry("verificationScore", 0.2), Map.entry("totalScore", 0.2),
+                        Map.entry("status", "NEEDS_REVIEW"), Map.entry("degraded", false),
+                        Map.entry("matchedTokens", List.of("channel", "independence")),
+                        Map.entry("codeEvidence", "docstring"), Map.entry("verificationReason", "fake"))),
+                "aliases", List.of("channel-independent transformer"),
+                "mentions", List.of(Map.of("section", "Model", "page", 4,
+                        "paragraphId", "1.1", "evidenceText", "evidence")))));
         output.put("stats", Map.of("conceptCount", 1, "candidateCount", 1, "needsReviewCount", 1));
         return new WorkerStageResponse(WorkerStageResponse.SCHEMA_VERSION, true,
                 output, List.of(), Map.of(), "0.3.0-mapping");

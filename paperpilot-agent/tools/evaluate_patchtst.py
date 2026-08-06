@@ -21,6 +21,8 @@ def _result_spec(value: str) -> tuple[str, Path]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate PatchTST paper-to-code mappings")
     parser.add_argument("--gold", type=Path, required=True)
+    parser.add_argument("--alignment", type=Path,
+                        help="benchmark-only concept alignment; never passed to production mapping")
     parser.add_argument("--result", action="append", required=True,
                         help="result JSON path or LABEL=path; repeat for rule/enhanced")
     parser.add_argument("--json-out", type=Path)
@@ -28,7 +30,9 @@ def main() -> None:
     args = parser.parse_args()
 
     gold = load_json(args.gold)
-    evaluations = [evaluate(gold, load_json(path), label) for label, path in map(_result_spec, args.result)]
+    alignment = load_json(args.alignment) if args.alignment else None
+    evaluations = [evaluate(gold, load_json(path), label, alignment)
+                   for label, path in map(_result_spec, args.result)]
     output = {"schemaVersion": 1, "benchmarkId": gold["benchmarkId"], "evaluations": evaluations}
     rendered_json = json.dumps(output, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     rendered_markdown = render_markdown(evaluations)

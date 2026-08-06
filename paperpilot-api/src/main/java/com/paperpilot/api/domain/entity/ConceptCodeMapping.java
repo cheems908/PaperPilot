@@ -26,6 +26,18 @@ public class ConceptCodeMapping {
     /** 置信度 0~1 */
     private BigDecimal confidence;
 
+    private BigDecimal semanticScore;
+    private BigDecimal symbolScore;
+    private BigDecimal keywordScore;
+    private BigDecimal documentationScore;
+    private BigDecimal verificationScore;
+    private BigDecimal totalScore;
+    private String mappingStatus;
+    private Boolean degraded;
+    private String verificationReason;
+    private String codeEvidence;
+    private String matchedTokensJson;
+
     private String notes;
 
     @TableField(insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)

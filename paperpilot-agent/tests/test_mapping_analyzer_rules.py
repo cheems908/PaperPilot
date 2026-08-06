@@ -14,7 +14,7 @@ PAPER = {
              "Channel independence splits the multivariate time series into univariate channels.",
              "The model applies channel independence to each series.",
          ]},
-        {"heading": "Patching", "page": 4,
+        {"heading": "Time-series Patching", "page": 4,
          "paragraphs": [
              "Patching segments the input into patches.",
          ]},
@@ -37,7 +37,8 @@ SYMBOLS = [
 
 def _req() -> StageRequest:
     return StageRequest(taskId=7, stageExecutionId=34, stage="MAP_CONCEPTS", attempt=1,
-                        input={"paper": PAPER, "symbols": SYMBOLS, "commitSha": "a" * 40})
+                        input={"paper": PAPER, "symbols": SYMBOLS, "commitSha": "a" * 40,
+                               "paperSha256": "b" * 64})
 
 
 def test_produces_non_stub_candidates():
@@ -61,7 +62,7 @@ def test_each_mapping_has_paper_and_code_evidence():
 
 def test_patching_matches_patchtst():
     resp = MappingAnalyzer().process(_req())
-    patching = next(c for c in resp.output["concepts"] if c["term"].lower() == "patching")
+    patching = next(c for c in resp.output["concepts"] if "patching" in c["term"].lower())
     # PatchTST 经 camel 拆分 + 同义词（patch→patching）命中符号名
     top = patching["candidates"][0]
     assert top["symbolRef"]["qualifiedName"] == "PatchTST"

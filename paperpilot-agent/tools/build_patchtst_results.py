@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from app.schemas.common import StageRequest
+from app.schemas.mapping import Concept, ConceptMention
 from app.services.code_indexer import CodeIndexer
 from app.services.mapping_analyzer import MappingAnalyzer
 from app.services.mapping_verifier import DeterministicMappingVerifier, VerificationResult
@@ -48,7 +49,8 @@ def _symbols(index_output: dict, commit: str) -> list[dict]:
 
 
 def _export(label: str, mode: str, model: str, prompt: str | None, output: dict,
-            durations: dict[str, float], llm_tokens: int | None) -> dict:
+            durations: dict[str, float], llm_tokens: int | None,
+            evaluation_mode: str = "END_TO_END") -> dict:
     return {
         "schemaVersion": 1,
         "label": label,
@@ -56,6 +58,7 @@ def _export(label: str, mode: str, model: str, prompt: str | None, output: dict,
             "label": label, "mode": mode, "seed": 0, "modelVersion": model,
             "promptVersion": prompt, "parameters": {"topK": 5, "embedding": "sha256-hash-64"},
             "stageDurationsMs": durations, "llmTokens": llm_tokens,
+            "evaluationMode": evaluation_mode,
         },
         "commitSha": output["commitSha"], "concepts": output["concepts"],
         "stats": output["stats"], "degraded": output["degraded"],
@@ -67,6 +70,8 @@ def main() -> None:
     parser.add_argument("--paper", type=Path, required=True)
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--commit", required=True)
+    parser.add_argument("--gold", type=Path,
+                        default=Path("tests/fixtures/patchtst/gold.json"))
     parser.add_argument("--out-dir", type=Path, default=Path("build/benchmark"))
     args = parser.parse_args()
     random.seed(0)
@@ -79,13 +84,30 @@ def main() -> None:
         _request("PARSE_PAPER", {"storagePath": paper.name})).output)
     indexed, index_ms = _timed(lambda: CodeIndexer(workspace_root=str(repo.parent))._index(
         repo, repo.name, actual_commit).output)
-    mapping_input = {"paper": parsed["paper"], "symbols": _symbols(indexed, actual_commit),
-                     "commitSha": actual_commit}
+    paper_sha256 = __import__("hashlib").sha256(paper.read_bytes()).hexdigest()
+    symbols = _symbols(indexed, actual_commit)
+    mapping_input = {"paper": parsed["paper"], "symbols": symbols,
+                     "commitSha": actual_commit, "paperSha256": paper_sha256}
 
     rule, rule_ms = _timed(lambda: MappingAnalyzer(verifier=RuleOnlyVerifier()).process(
         _request("MAP_CONCEPTS", mapping_input)).output)
     enhanced, enhanced_ms = _timed(lambda: MappingAnalyzer(verifier=DeterministicMappingVerifier()).process(
         _request("MAP_CONCEPTS", mapping_input)).output)
+    gold = json.loads(args.gold.read_text(encoding="utf-8"))
+    oracle_concepts = []
+    for item in gold["concepts"]:
+        mention = ConceptMention(section=item["section"], page=item["page"],
+                                 paragraphId=f"gold:{item['id']}", evidenceText=item["evidence"])
+        oracle_concepts.append(Concept(
+            conceptId=f"oracle_{item['id']}", term=item["concept"], aliases=[],
+            extractorVersion="benchmark-oracle-v1", mentions=[mention], source="benchmark-oracle",
+            section=item["section"], page=item["page"], paragraphId=mention.paragraphId,
+            evidenceText=item["evidence"],
+            decision="ABSTAINED" if item["certainty"] == "NO_EXPLICIT_IMPLEMENTATION" else "MAPPED",
+            abstentionReason="GOLD_NO_EXPLICIT_IMPLEMENTATION"
+            if item["certainty"] == "NO_EXPLICIT_IMPLEMENTATION" else None))
+    oracle, oracle_ms = _timed(lambda: MappingAnalyzer(verifier=DeterministicMappingVerifier())
+                               .analyze_concepts(oracle_concepts, symbols, actual_commit).output)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     common = {"PARSE_PAPER": parse_ms, "INDEX_CODE": index_ms}
     outputs = {
@@ -94,6 +116,10 @@ def main() -> None:
         "enhanced-result.json": _export("增强版（确定性验证器）", "rules+hash-embedding+verification",
                                         "deterministic-sha256-v1", "1", enhanced,
                                         {**common, "MAP_CONCEPTS": enhanced_ms}, 0),
+        "oracle-result.json": _export("Oracle 检索（确定性验证器）", "oracle-concepts+retrieval",
+                                      "deterministic-sha256-v1", "1", oracle,
+                                      {"INDEX_CODE": index_ms, "MAP_CONCEPTS": oracle_ms}, 0,
+                                      "ORACLE_RETRIEVAL"),
     }
     for name, value in outputs.items():
         (args.out_dir / name).write_text(

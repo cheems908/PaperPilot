@@ -119,3 +119,22 @@ curl -s localhost:8001/internal/health
 - 当前质量结论：两版 P@K/R@K/MRR 均为 0，主因是论文解析后的概念抽取退化为单词级术语，
   无法与 9 个 CONFIRMED 复合概念形成稳定匹配键；代码/论文候选证据完整率为 99.29%。
   T5 工程闭环已形成，但映射质量尚不具备对外宣称条件，下一步应优先修复概念抽取与概念 ID 对齐。
+
+### T5-04A/B/C 已完成（基线起点 `58987af`，当前未提交）
+
+- **评估纠偏**：概念覆盖率、oracle retrieval、完整 E2E 已分离；缺失概念不再计作正确弃答，
+  候选必须自身携带冻结 commit。benchmark 对齐只使用独立 alignment fixture，生产输出不含 `PT-*`。
+- **复合概念与稳定身份**：新增独立 `ConceptExtractor`，覆盖 title/abstract/heading/body，输出原始
+  surface phrase、aliases、合并 mentions，并以 PDF SHA、规范术语和主证据锚点生成确定性 `pc_` ID。
+- **结果契约保真**：Flyway V8 增加 `concept_key`、aliases/mentions/extractor/decision 及全部候选分项，
+  唯一键改为 `(paper_id, concept_key)`；Java Result API 原样返回 Python 状态，不再按 confidence 重算。
+- 真实 PatchTST 两次任务均完成四阶段并通过 Java 重启恢复；共抽取 **29** 个概念，稳定 ID 一致率
+  **100%**，CONFIRMED 覆盖 **8/9**，显式弃答准确率 **100%**，论文/代码证据完整率 **100%**。
+- v2 报告位于 `paperpilot-agent/reports/T5-04-v2-patchtst-mapping-quality.{json,md}`。规则版、增强版和
+  oracle 的 `R@5=0.1667、MRR=0.0926`，说明当前主瓶颈已从概念抽取转移到候选检索与重排。
+- 验收：Python **100 passed**；Java 首轮全量运行 **170 tests**，修复 1 个夹具契约问题后，失败的
+  3 个测试定向复跑全部通过（其余 167 项在首轮通过）。真实 E2E 产物：
+  `.e2e-artifacts/20260806T073758Z/`。
+
+下一步建议进入 **T5-05**：优先解决 Top-K 候选多样性、正确文件错误符号、docstring/父符号/调用上下文
+评分；至少增加两组论文—仓库基准后，再进入真实 embedding 和可选 LLM（T5-06）。

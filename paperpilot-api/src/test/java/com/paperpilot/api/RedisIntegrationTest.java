@@ -1,6 +1,7 @@
 package com.paperpilot.api;
 
 import com.paperpilot.api.domain.entity.AnalysisTask;
+import com.paperpilot.api.domain.entity.File;
 import com.paperpilot.api.domain.entity.GitRepository;
 import com.paperpilot.api.domain.entity.Paper;
 import com.paperpilot.api.domain.entity.Project;
@@ -12,6 +13,7 @@ import com.paperpilot.api.dto.mq.StageTaskMessage;
 import com.paperpilot.api.dto.progress.TaskProgressSnapshot;
 import com.paperpilot.api.dto.progress.TaskProgressView;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
+import com.paperpilot.api.mapper.FileMapper;
 import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.PaperMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
@@ -74,6 +76,8 @@ class RedisIntegrationTest {
     TaskProgressService progressService;
     @Autowired
     AnalysisTaskMapper taskMapper;
+    @Autowired
+    FileMapper fileMapper;
     @Autowired
     StageExecutionMapper stageExecutionMapper;
     @Autowired
@@ -146,8 +150,16 @@ class RedisIntegrationTest {
         paper.setPdfUrl("http://example.com/p.pdf");
         paperMapper.insert(paper);
 
+        File file = new File();
+        file.setFileName("PatchTST.pdf");
+        file.setSha256("a".repeat(64));
+        file.setSize(100L);
+        file.setStoragePath("/tmp/paperpilot/uploads/" + "a".repeat(64) + ".pdf");
+        fileMapper.insert(file);
+
         AnalysisTask task = new AnalysisTask();
         task.setProjectId(project.getId());
+        task.setSourceFileId(file.getId());
         task.setRepositoryId(repo.getId());
         task.setPaperId(paper.getId());
         task.setStatus(TaskStatus.RUNNING);

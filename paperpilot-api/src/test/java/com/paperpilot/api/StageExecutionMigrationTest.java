@@ -107,6 +107,43 @@ class StageExecutionMigrationTest {
         }
     }
 
+    @Test
+    void v8BackfillsLegacyConceptIdentityAndKeepsHistory() throws Exception {
+        Flyway.configure()
+                .dataSource(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())
+                .target(MigrationVersion.fromVersion("7"))
+                .load()
+                .migrate();
+        long conceptId;
+        try (Connection conn = openConnection(); Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("INSERT INTO project (name) VALUES ('legacy-concept')");
+            long projectId = lastId(stmt);
+            stmt.executeUpdate("INSERT INTO paper (project_id, title, pdf_url) VALUES ("
+                    + projectId + ", 'Paper', 'legacy.pdf')");
+            long paperId = lastId(stmt);
+            stmt.executeUpdate("INSERT INTO paper_concept (paper_id, concept_name, evidence_text) "
+                    + "VALUES (" + paperId + ", 'legacy term', 'legacy evidence')");
+            conceptId = lastId(stmt);
+        }
+
+        migrateLatest();
+
+        try (Connection conn = openConnection(); Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT concept_key, extractor_version, decision, evidence_text "
+                     + "FROM paper_concept WHERE id=" + conceptId)) {
+            assertThat(rs.next()).isTrue();
+            assertThat(rs.getString("concept_key")).startsWith("legacy_").hasSize(27);
+            assertThat(rs.getString("extractor_version")).isEqualTo("legacy-v1");
+            assertThat(rs.getString("decision")).isEqualTo("MAPPED");
+            assertThat(rs.getString("evidence_text")).isEqualTo("legacy evidence");
+        }
+        try (Connection conn = openConnection(); Statement stmt = conn.createStatement()) {
+            assertThat(queryStrings(stmt, "SELECT index_name FROM information_schema.statistics "
+                    + "WHERE table_schema=DATABASE() AND table_name='paper_concept'"))
+                    .contains("uk_concept_paper_key").doesNotContain("uk_concept_paper_name");
+        }
+    }
+
     private void migrateLatest() {
         Flyway.configure()
                 .dataSource(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword())

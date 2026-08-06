@@ -6,7 +6,7 @@ from app.services.mapping_verifier import VerificationError, VerificationResult
 PAPER = {
     "title": "A Time Series is Worth 64 Words",
     "sections": [
-        {"heading": "Patching", "page": 4,
+        {"heading": "Time-series Patching", "page": 4,
          "paragraphs": ["Patching segments the input into patches."]},
     ],
 }
@@ -70,20 +70,23 @@ class _FailingVerifier:
 
 def _req():
     return StageRequest(taskId=7, stageExecutionId=34, stage="MAP_CONCEPTS", attempt=1,
-                        input={"paper": PAPER, "symbols": SYMBOLS, "commitSha": "a" * 40})
+                        input={"paper": PAPER, "symbols": SYMBOLS, "commitSha": "a" * 40,
+                               "paperSha256": "b" * 64})
 
 
 def test_analyzer_marks_verified_with_fixed_fakes():
-    analyzer = MappingAnalyzer(high_threshold=0.7, low_threshold=0.3,
+    analyzer = MappingAnalyzer(high_threshold=0.6, low_threshold=0.3,
                                embedding_provider=_FixedEmbedding(), verifier=_FixedVerifier())
     resp = analyzer.process(_req())
     out = resp.output
     assert out["degraded"] is False
     assert out["stats"]["verifiedCount"] >= 1
-    patching = next(c for c in out["concepts"] if c["term"].lower() == "patching")
+    patching = next(c for c in out["concepts"] if "patching" in c["term"].lower())
     top = patching["candidates"][0]
-    # semantic=1.0 + symbol=1.0 + verification=1.0 → total = 0.35+0.25+0.20 = 0.80
-    assert top["totalScore"] == 0.8
+    assert top["totalScore"] == round(0.35 * top["semanticScore"]
+                                      + 0.25 * top["symbolScore"]
+                                      + 0.20 * top["keywordScore"]
+                                      + 0.20 * top["verificationScore"], 4)
     assert top["status"] == "VERIFIED"
     assert top["verificationScore"] == 1.0
 

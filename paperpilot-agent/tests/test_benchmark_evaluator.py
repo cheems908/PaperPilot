@@ -32,12 +32,13 @@ def _result():
     evidence = {"source": "heading", "page": 1, "evidenceText": "paper evidence"}
     return {"metadata": {"label": "enhanced", "stageDurationsMs": {"MAP": 12}, "llmTokens": 8},
             "concepts": [
-                {"conceptId": "PT-01", "term": "Different wording", **evidence,
+                {"conceptId": "pc_not_a_benchmark_id", "term": "Patching", **evidence,
                  "candidates": [_candidate("model.py", "Model.patch")]},
                 {"term": "Shared encoder", **evidence,
                  "candidates": [_candidate("wrong.py", "Wrong.forward", "NEEDS_REVIEW"),
                                 _candidate("model.py", "Encoder.forward")]},
-                {"conceptId": "PT-03", "term": "Training loss", **evidence, "candidates": []},
+                {"conceptId": "pc_abstention", "term": "Training loss", **evidence,
+                 "decision": "ABSTAINED", "abstentionReason": "NO_STABLE_SYMBOL", "candidates": []},
             ]}
 
 
@@ -49,6 +50,7 @@ def test_metrics_have_explicit_denominators_and_expected_values():
         "abstentionCases": 1, "stageDurations": 1,
     }
     assert report["metrics"]["precisionAt1"] == 0.5
+    assert report["metrics"]["conceptExtractionCoverage"] == 1.0
     assert report["metrics"]["recallAt3"] == 0.75
     assert report["metrics"]["mrr"] == 0.75
     assert report["metrics"]["evidenceCompleteness"] == 1.0
@@ -81,3 +83,47 @@ def test_unmatched_concepts_still_count_toward_evidence_denominator():
     report = evaluate(_gold(), result)
     assert report["denominators"]["evaluatedCandidates"] == 4
     assert report["metrics"]["evidenceCompleteness"] == 1.0
+
+
+def test_result_api_mentions_are_valid_paper_evidence_anchor():
+    result = _result()
+    concept = result["concepts"][0]
+    concept.pop("page")
+    concept.pop("source")
+    concept["mentions"] = [{"section": "Model", "page": 4, "paragraphId": "4.2",
+                            "evidenceText": "paper evidence"}]
+    assert evaluate(_gold(), result)["metrics"]["evidenceCompleteness"] == 1.0
+
+
+def test_missing_concept_is_not_counted_as_abstention():
+    result = _result()
+    result["concepts"] = result["concepts"][:2]
+    report = evaluate(_gold(), result)
+    assert report["metrics"]["abstentionAccuracy"] == 0.0
+    assert report["errorSummary"]["TERM_OR_CONCEPT_EXTRACTION"] == 1
+
+
+def test_empty_candidates_without_explicit_decision_is_not_abstention():
+    result = _result()
+    abstention = result["concepts"][2]
+    abstention.pop("decision")
+    abstention.pop("abstentionReason")
+    report = evaluate(_gold(), result)
+    assert report["metrics"]["abstentionAccuracy"] == 0.0
+    assert report["errorSummary"]["IMPLICIT_OR_INVALID_ABSTENTION"] == 1
+
+
+def test_candidate_must_explicitly_carry_frozen_commit():
+    result = _result()
+    result["concepts"][0]["candidates"][0]["symbolRef"].pop("commitSha")
+    report = evaluate(_gold(), result)
+    assert report["metrics"]["evidenceCompleteness"] < 1.0
+    assert report["metrics"]["recallAt1"] == 0.0
+
+
+def test_benchmark_id_is_never_used_as_production_alignment_key():
+    result = _result()
+    result["concepts"][0]["conceptId"] = "PT-01"
+    result["concepts"][0]["term"] = "unrelated"
+    report = evaluate(_gold(), result)
+    assert report["metrics"]["conceptExtractionCoverage"] == 0.5

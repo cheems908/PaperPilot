@@ -90,8 +90,8 @@ class TaskResultServiceTest {
             long[] candidates = insertChain(projectMapper, repositoryMapper, paperMapper,
                     codeSymbolMapper, taskMapper, "c2");
 
-            insertConceptAndMapping(conceptMapper, mappingMapper, needsReview[0], needsReview[1], "0.2");
-            insertConceptAndMapping(conceptMapper, mappingMapper, candidates[0], candidates[1], "0.8");
+            insertConceptAndMapping(conceptMapper, mappingMapper, needsReview[0], needsReview[1], "0.2", "NEEDS_REVIEW");
+            insertConceptAndMapping(conceptMapper, mappingMapper, candidates[0], candidates[1], "0.8", "VERIFIED");
 
             assertThat(resultService.getResult(noMapping[2]).mappingStatus()).isEqualTo("NO_MAPPINGS");
             assertThat(resultService.getResult(noMapping[2]).mappings()).isEmpty();
@@ -105,7 +105,13 @@ class TaskResultServiceTest {
             TaskResultResponse candidatesResp = resultService.getResult(candidates[2]);
             assertThat(candidatesResp.mappingStatus()).isEqualTo("CANDIDATES");
             assertThat(candidatesResp.mappings().get(0).candidates().get(0).status())
-                    .isEqualTo("CANDIDATE");
+                    .isEqualTo("VERIFIED");
+            assertThat(candidatesResp.mappings().get(0).conceptId()).startsWith("pc_");
+            assertThat(candidatesResp.mappings().get(0).extractorVersion()).isEqualTo("compound-rule-v1");
+            assertThat(candidatesResp.mappings().get(0).candidates().get(0).semanticScore())
+                    .isEqualByComparingTo("0.11");
+            assertThat(candidatesResp.mappings().get(0).candidates().get(0).verificationReason())
+                    .isEqualTo("verified by fixture");
         }
     }
 
@@ -149,10 +155,16 @@ class TaskResultServiceTest {
 
     private void insertConceptAndMapping(PaperConceptMapper conceptMapper,
                                          ConceptCodeMappingMapper mappingMapper,
-                                         long paperId, long symbolId, String confidence) {
+                                         long paperId, long symbolId, String confidence, String status) {
         PaperConcept concept = new PaperConcept();
         concept.setPaperId(paperId);
+        concept.setConceptKey("pc_" + String.format("%024x", paperId));
         concept.setConceptName("channel independence");
+        concept.setAliasesJson("[]");
+        concept.setMentionsJson("[{\"section\":\"Model\",\"page\":4,"
+                + "\"paragraphId\":\"1.1\",\"evidenceText\":\"evidence\"}]");
+        concept.setExtractorVersion("compound-rule-v1");
+        concept.setDecision("MAPPED");
         concept.setEvidenceText("evidence");
         conceptMapper.upsert(concept);
         PaperConcept saved = conceptMapper.selectList(null).stream()
@@ -161,6 +173,17 @@ class TaskResultServiceTest {
         mapping.setConceptId(saved.getId());
         mapping.setCodeSymbolId(symbolId);
         mapping.setConfidence(new BigDecimal(confidence));
+        mapping.setTotalScore(new BigDecimal(confidence));
+        mapping.setSemanticScore(new BigDecimal("0.11"));
+        mapping.setSymbolScore(new BigDecimal("0.22"));
+        mapping.setKeywordScore(new BigDecimal("0.33"));
+        mapping.setDocumentationScore(new BigDecimal("0.44"));
+        mapping.setVerificationScore(new BigDecimal("0.55"));
+        mapping.setMappingStatus(status);
+        mapping.setDegraded(false);
+        mapping.setVerificationReason("verified by fixture");
+        mapping.setCodeEvidence("def forward(self)");
+        mapping.setMatchedTokensJson("[]");
         mappingMapper.upsert(mapping);
     }
 }

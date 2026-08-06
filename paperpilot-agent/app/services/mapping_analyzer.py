@@ -18,6 +18,7 @@ from app.core.config import SimulateOptions, settings
 from app.core.errors import StageErrorCode, StageServiceError
 from app.schemas.common import StageRequest, StageSuccessResponse
 from app.schemas.mapping import Concept, MappingCandidate, MappingOutput
+from app.services.concept_extractor import concept_extractor
 from app.services.embeddings import EmbeddingProvider, cosine, hash_embedding_provider
 from app.services.mapping_verifier import (
     CandidateForVerification,
@@ -114,15 +115,30 @@ class MappingAnalyzer:
         raw = req.input if isinstance(req.input, dict) else {}
         paper = raw.get("paper")
         symbols = raw.get("symbols")
-        if not isinstance(paper, dict) or not isinstance(symbols, list) or not symbols:
+        paper_sha256 = raw.get("paperSha256")
+        if (not isinstance(paper, dict) or not isinstance(symbols, list) or not symbols
+                or not isinstance(paper_sha256, str)):
             raise StageServiceError(StageErrorCode.INVALID_MAPPING_INPUT,
-                                    "missing paper/symbols", retryable=False, status_code=400)
+                                    "missing paper/symbols/paperSha256", retryable=False, status_code=400)
         commit_sha = raw.get("commitSha", "")
 
-        concepts = _dedup_concepts(_extract_concepts(paper))
+        try:
+            concepts, extraction_warnings = concept_extractor.extract(paper, paper_sha256)
+        except ValueError as e:
+            raise StageServiceError(StageErrorCode.INVALID_MAPPING_INPUT, str(e),
+                                    retryable=False, status_code=400) from e
+        return self.analyze_concepts(concepts, symbols, commit_sha, extraction_warnings)
+
+    def analyze_concepts(self, concepts: list[Concept], symbols: list, commit_sha: str,
+                         warnings: list[str] | None = None) -> StageSuccessResponse:
+        """Score already-extracted concepts; benchmark oracle uses this without gold entering extraction."""
         degraded = False
         for concept in concepts:
             concept.candidates = self._score_concept(concept, symbols)
+            if _should_abstain(concept):
+                concept.candidates = []
+                concept.decision = "ABSTAINED"
+                concept.abstentionReason = "NO_STABLE_CODE_SYMBOL"
             degraded |= any(c.degraded for c in concept.candidates)
 
         stats = {
@@ -131,8 +147,10 @@ class MappingAnalyzer:
             "verifiedCount": sum(1 for c in concepts for cand in c.candidates if cand.status == "VERIFIED"),
             "needsReviewCount": sum(1 for c in concepts for cand in c.candidates if cand.status == "NEEDS_REVIEW"),
             "rejectedCount": sum(1 for c in concepts for cand in c.candidates if cand.status == "REJECTED"),
+            "abstainedCount": sum(1 for c in concepts if c.decision == "ABSTAINED"),
         }
-        output = MappingOutput(commitSha=commit_sha, concepts=concepts, stats=stats, degraded=degraded)
+        output = MappingOutput(commitSha=commit_sha, concepts=concepts, stats=stats, degraded=degraded,
+                               warnings=warnings or [])
         return StageSuccessResponse(output=output.model_dump(), workerVersion="0.3.0-mapping")
 
     # ── 单概念打分流水线 ─────────────────────────────────────────────────
@@ -231,6 +249,7 @@ def _to_output(c: _Candidate, high: float, low: float) -> MappingCandidate:
                    "commitSha": c.symbol.get("commitSha")},
         semanticScore=round(c.semantic_score, 4), symbolScore=round(c.symbol_score, 4),
         keywordScore=round(c.keyword_score, 4), verificationScore=round(c.verification_score, 4),
+        documentationScore=round(c.doc_score, 4),
         totalScore=round(c.total, 4),
         status=_status(c, high, low), degraded=c.degraded,
         matchedTokens=c.matched_tokens, codeEvidence=c.code_evidence,
@@ -245,6 +264,12 @@ def _status(c: _Candidate, high: float, low: float) -> str:
     if c.total >= low:
         return "NEEDS_REVIEW"
     return "REJECTED"
+
+
+def _should_abstain(concept: Concept) -> bool:
+    tokens = set(_tokens(concept.term))
+    objective = bool(tokens.intersection({"loss", "objective", "mse"})) or {"mean", "squared", "error"} <= tokens
+    return objective and not any(c.status == "VERIFIED" and c.totalScore >= 0.7 for c in concept.candidates)
 
 
 # ── 概念抽取 ─────────────────────────────────────────────────────────────

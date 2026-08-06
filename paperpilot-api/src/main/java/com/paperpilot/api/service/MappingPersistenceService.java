@@ -85,24 +85,29 @@ public class MappingPersistenceService {
     }
 
     private Long upsertConcept(Long paperId, MappingConceptDto concept) {
-        PaperConcept existing = findConcept(paperId, concept.term());
-        if (existing != null) {
-            return existing.getId();
+        if (concept.conceptId() == null || !concept.conceptId().matches("^pc_[0-9a-f]{24}$")) {
+            throw new IllegalArgumentException("invalid production conceptId");
         }
         PaperConcept row = new PaperConcept();
         row.setPaperId(paperId);
+        row.setConceptKey(concept.conceptId());
         row.setConceptName(concept.term());
+        row.setAliasesJson(json(concept.aliases()));
+        row.setMentionsJson(json(concept.mentions()));
+        row.setExtractorVersion(concept.extractorVersion());
+        row.setDecision(concept.decision());
+        row.setAbstentionReason(concept.abstentionReason());
         row.setEvidenceText(concept.evidenceText());
         row.setEvidenceLocation(locationOf(concept));
         paperConceptMapper.upsert(row);
-        PaperConcept saved = findConcept(paperId, concept.term());
+        PaperConcept saved = findConcept(paperId, concept.conceptId());
         return saved == null ? null : saved.getId();
     }
 
-    private PaperConcept findConcept(Long paperId, String term) {
+    private PaperConcept findConcept(Long paperId, String conceptKey) {
         return paperConceptMapper.selectOne(new LambdaQueryWrapper<PaperConcept>()
                 .eq(PaperConcept::getPaperId, paperId)
-                .eq(PaperConcept::getConceptName, term)
+                .eq(PaperConcept::getConceptKey, conceptKey)
                 .last("LIMIT 1"));
     }
 
@@ -111,10 +116,29 @@ public class MappingPersistenceService {
         row.setConceptId(conceptId);
         row.setCodeSymbolId(symbolId);
         row.setConfidence(candidate.totalScore());
+        row.setSemanticScore(candidate.semanticScore());
+        row.setSymbolScore(candidate.symbolScore());
+        row.setKeywordScore(candidate.keywordScore());
+        row.setDocumentationScore(candidate.documentationScore());
+        row.setVerificationScore(candidate.verificationScore());
+        row.setTotalScore(candidate.totalScore());
+        row.setMappingStatus(candidate.status());
+        row.setDegraded(candidate.degraded());
+        row.setVerificationReason(candidate.verificationReason());
+        row.setCodeEvidence(candidate.codeEvidence());
+        row.setMatchedTokensJson(json(candidate.matchedTokens()));
         row.setNotes("status=" + candidate.status()
                 + "; tokens=" + (candidate.matchedTokens() == null ? "[]" : candidate.matchedTokens())
                 + "; evidence=" + (candidate.codeEvidence() == null ? "" : candidate.codeEvidence().replace('\n', ' ')));
         conceptCodeMappingMapper.upsert(row);
+    }
+
+    private String json(Object value) {
+        try {
+            return StageSnapshotContract.MAPPER.writeValueAsString(value == null ? List.of() : value);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("mapping JSON field serialization failed", e);
+        }
     }
 
     private CodeSymbol resolveSymbol(Long repositoryId, com.paperpilot.api.dto.mapping.SymbolRef ref) {

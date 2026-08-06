@@ -20,7 +20,19 @@ public class PaperConcept {
 
     private Long paperId;
 
+    private String conceptKey;
+
     private String conceptName;
+
+    private String aliasesJson;
+
+    private String mentionsJson;
+
+    private String extractorVersion;
+
+    private String decision;
+
+    private String abstentionReason;
 
     private String evidenceText;
 

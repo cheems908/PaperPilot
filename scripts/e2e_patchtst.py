@@ -73,17 +73,37 @@ def validate_result(result: dict, expected_commit: str) -> list[tuple]:
     signatures = []
     assert result["mappings"], result
     for concept in result["mappings"]:
+        assert concept.get("conceptId", "").startswith("pc_"), concept
+        assert isinstance(concept.get("aliases"), list), concept
+        assert concept.get("extractorVersion") == "compound-rule-v1", concept
+        assert concept.get("mentions") and all(m.get("paragraphId") and m.get("evidenceText")
+                                               for m in concept["mentions"]), concept
         assert concept.get("source") and concept.get("evidenceText"), concept
-        assert concept.get("candidates"), concept
+        if concept.get("decision") == "ABSTAINED":
+            assert concept.get("abstentionReason") and not concept.get("candidates"), concept
+            continue
+        assert concept.get("decision") == "MAPPED" and concept.get("candidates"), concept
         for candidate in concept["candidates"]:
             assert candidate.get("qualifiedName") and candidate.get("filePath"), candidate
             assert isinstance(candidate.get("startLine"), int) and candidate["startLine"] > 0, candidate
             assert candidate.get("totalScore") is not None and candidate.get("status"), candidate
+            for score in ("semanticScore", "symbolScore", "keywordScore", "documentationScore",
+                          "verificationScore"):
+                assert score in candidate, candidate
+            assert "degraded" in candidate and "verificationReason" in candidate, candidate
             assert candidate.get("evidence") is not None, candidate
             signatures.append((concept["term"], candidate["qualifiedName"], candidate["filePath"],
                                candidate["startLine"], candidate["status"]))
     assert len(signatures) == len(set(signatures)), "duplicate business mappings"
     return sorted(signatures)
+
+
+def concept_identities(result: dict) -> list[tuple]:
+    return sorted((concept["conceptId"], concept["term"], tuple(concept.get("aliases") or []),
+                   tuple((m.get("section"), m.get("page"), m.get("paragraphId"))
+                         for m in concept.get("mentions") or []),
+                   concept.get("decision"), concept.get("abstentionReason"))
+                  for concept in result["mappings"])
 
 
 def run(args) -> None:
@@ -117,9 +137,15 @@ def run(args) -> None:
             assert terminal["status"] == "SUCCEEDED", terminal
             result, _ = api(client, "GET", f"/api/v1/tasks/{created['taskId']}/result")
             signatures = validate_result(result, args.commit)
-            state["tasks"].append({"taskId": created["taskId"], "signatures": signatures})
+            result_file = args.state.parent / f"task-{created['taskId']}-result.json"
+            result_file.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+            state["tasks"].append({"taskId": created["taskId"], "signatures": signatures,
+                                   "conceptIdentities": concept_identities(result),
+                                   "resultFile": result_file.name})
         assert state["tasks"][0]["signatures"] == state["tasks"][1]["signatures"], \
             "two benchmark runs produced different structures"
+        assert state["tasks"][0]["conceptIdentities"] == state["tasks"][1]["conceptIdentities"], \
+            "two benchmark runs produced different stable concept identities"
     args.state.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"phase": "run", "valid": True,
                       "taskIds": [task["taskId"] for task in state["tasks"]]}, ensure_ascii=False))
@@ -132,6 +158,9 @@ def verify(args) -> None:
             result, _ = api(client, "GET", f"/api/v1/tasks/{saved['taskId']}/result")
             signatures = validate_result(result, state["expectedCommit"])
             assert signatures == [tuple(item) for item in saved["signatures"]]
+            assert concept_identities(result) == [
+                (item[0], item[1], tuple(item[2]), tuple(tuple(anchor) for anchor in item[3]), item[4], item[5])
+                for item in saved.get("conceptIdentities", concept_identities(result))]
             observe_sse(client, saved["taskId"])
     print(json.dumps({"phase": "restart-verify", "valid": True,
                       "taskIds": [task["taskId"] for task in state["tasks"]]}, ensure_ascii=False))
