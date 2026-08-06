@@ -107,3 +107,15 @@ curl -s localhost:8001/internal/health
 ## 7. 避免重复踩坑
 
 详见 `docs/踩坑.md`（T2-03 超时分类、JdkClientHttpRequestFactory API、stale class、SimpleApplicationEventPublisher 不存在、LambdaUpdateWrapper 需 TableInfo 缓存等）。
+
+## 8. 2026-08-06 T5 阶段更新
+
+- T5-01 已冻结 PatchTST PDF SHA256、仓库 commit 和 12 条人工 gold（9 CONFIRMED、1 AUXILIARY、
+  1 LOW_CONFIDENCE、1 NO_EXPLICIT_IMPLEMENTATION）。
+- T5-02 已用真实 GROBID、GitHub 固定 commit、MySQL/Redis/RocketMQ 连续完成两次四阶段任务，
+  并通过 Java 重启后的结果与 SSE 恢复校验。
+- T5-03 已增加确定性 evaluator、规则版/增强版基准生成器以及 JSON/Markdown 固化报告。
+  Python 全量基线为 **89 passed**；最近 Java 全量基线为 **169 tests, 0 failures**。
+- 当前质量结论：两版 P@K/R@K/MRR 均为 0，主因是论文解析后的概念抽取退化为单词级术语，
+  无法与 9 个 CONFIRMED 复合概念形成稳定匹配键；代码/论文候选证据完整率为 99.29%。
+  T5 工程闭环已形成，但映射质量尚不具备对外宣称条件，下一步应优先修复概念抽取与概念 ID 对齐。

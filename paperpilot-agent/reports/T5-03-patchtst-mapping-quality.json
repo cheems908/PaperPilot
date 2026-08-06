@@ -1,0 +1,274 @@
+{
+  "benchmarkId": "patchtst-iclr2023-v1",
+  "evaluations": [
+    {
+      "benchmarkId": "patchtst-iclr2023-v1",
+      "configuration": {
+        "mode": "rules+hash-embedding",
+        "modelVersion": "none",
+        "parameters": {
+          "embedding": "sha256-hash-64",
+          "topK": 5
+        },
+        "promptVersion": null,
+        "seed": 0
+      },
+      "denominators": {
+        "abstentionCases": 1,
+        "confirmedConcepts": 9,
+        "confirmedRelevantSymbols": 12,
+        "evaluatedCandidates": 705,
+        "matchedConfirmedConcepts": 0,
+        "stageDurations": 3
+      },
+      "errorSummary": {
+        "TERM_OR_CONCEPT_EXTRACTION": 9
+      },
+      "errors": [
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|PatchTST_backbone.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.__init__",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_layers.py|positional_encoding"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_MultiheadAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_ScaledDotProductAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|Flatten_Head.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._denormalize",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._normalize"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|random_masking",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|PretrainHead.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        }
+      ],
+      "label": "规则版",
+      "metricDefinitions": {
+        "abstentionAccuracy": "NO_EXPLICIT_IMPLEMENTATION concepts with no candidates divided by abstention cases",
+        "evidenceCompleteness": "candidates with paper location/text and commit/path/symbol/startLine divided by evaluated candidates",
+        "mrr": "mean reciprocal rank of the first relevant symbol over CONFIRMED concepts",
+        "needsReviewRatio": "NEEDS_REVIEW candidates divided by evaluated candidates",
+        "precisionAtK": "macro mean of relevant symbols in top K divided by K over CONFIRMED concepts",
+        "recallAtK": "macro mean of relevant symbols in top K divided by all gold symbols over CONFIRMED concepts"
+      },
+      "metrics": {
+        "abstentionAccuracy": 1.0,
+        "averageStageDurationMs": 3046.546,
+        "evidenceCompleteness": 0.992908,
+        "llmTokens": 0,
+        "mrr": 0.0,
+        "needsReviewRatio": 0.299291,
+        "precisionAt1": 0.0,
+        "precisionAt3": 0.0,
+        "precisionAt5": 0.0,
+        "recallAt1": 0.0,
+        "recallAt3": 0.0,
+        "recallAt5": 0.0
+      },
+      "schemaVersion": 1
+    },
+    {
+      "benchmarkId": "patchtst-iclr2023-v1",
+      "configuration": {
+        "mode": "rules+hash-embedding+verification",
+        "modelVersion": "deterministic-sha256-v1",
+        "parameters": {
+          "embedding": "sha256-hash-64",
+          "topK": 5
+        },
+        "promptVersion": "1",
+        "seed": 0
+      },
+      "denominators": {
+        "abstentionCases": 1,
+        "confirmedConcepts": 9,
+        "confirmedRelevantSymbols": 12,
+        "evaluatedCandidates": 705,
+        "matchedConfirmedConcepts": 0,
+        "stageDurations": 3
+      },
+      "errorSummary": {
+        "TERM_OR_CONCEPT_EXTRACTION": 9
+      },
+      "errors": [
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Time-series patching",
+          "conceptId": "PT-01",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|PatchTST_backbone.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Channel-independent shared Transformer",
+          "conceptId": "PT-02",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Patch projection and learnable positional encoding",
+          "conceptId": "PT-03",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTiEncoder.__init__",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_layers.py|positional_encoding"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Vanilla Transformer encoder stack",
+          "conceptId": "PT-04",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|TSTEncoder.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Multi-head self-attention",
+          "conceptId": "PT-05",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_MultiheadAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Scaled dot-product and residual attention",
+          "conceptId": "PT-06",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|_ScaledDotProductAttention.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Flatten and linear forecasting head",
+          "conceptId": "PT-07",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/PatchTST_backbone.py|Flatten_Head.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Instance normalization and denormalization",
+          "conceptId": "PT-08",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._denormalize",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_supervised/layers/RevIN.py|RevIN._normalize"
+          ],
+          "type": "FALSE_NEGATIVE"
+        },
+        {
+          "category": "TERM_OR_CONCEPT_EXTRACTION",
+          "concept": "Masked patch pre-training",
+          "conceptId": "PT-09",
+          "missing": [
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/callback/patch_mask.py|random_masking",
+            "204c21efe0b39603ad6e2ca640ef5896646ab1a9|PatchTST_self_supervised/src/models/patchTST.py|PretrainHead.forward"
+          ],
+          "type": "FALSE_NEGATIVE"
+        }
+      ],
+      "label": "增强版（确定性验证器）",
+      "metricDefinitions": {
+        "abstentionAccuracy": "NO_EXPLICIT_IMPLEMENTATION concepts with no candidates divided by abstention cases",
+        "evidenceCompleteness": "candidates with paper location/text and commit/path/symbol/startLine divided by evaluated candidates",
+        "mrr": "mean reciprocal rank of the first relevant symbol over CONFIRMED concepts",
+        "needsReviewRatio": "NEEDS_REVIEW candidates divided by evaluated candidates",
+        "precisionAtK": "macro mean of relevant symbols in top K divided by K over CONFIRMED concepts",
+        "recallAtK": "macro mean of relevant symbols in top K divided by all gold symbols over CONFIRMED concepts"
+      },
+      "metrics": {
+        "abstentionAccuracy": 1.0,
+        "averageStageDurationMs": 3038.59,
+        "evidenceCompleteness": 0.992908,
+        "llmTokens": 0,
+        "mrr": 0.0,
+        "needsReviewRatio": 0.770213,
+        "precisionAt1": 0.0,
+        "precisionAt3": 0.0,
+        "precisionAt5": 0.0,
+        "recallAt1": 0.0,
+        "recallAt3": 0.0,
+        "recallAt5": 0.0
+      },
+      "schemaVersion": 1
+    }
+  ],
+  "schemaVersion": 1
+}
