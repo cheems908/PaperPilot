@@ -18,6 +18,7 @@ import com.paperpilot.api.mapper.PaperConceptMapper;
 import com.paperpilot.api.mapper.PaperMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
+import com.paperpilot.api.progress.TaskEventProperties;
 import com.paperpilot.api.progress.TaskProgressProperties;
 import com.paperpilot.api.progress.TaskProgressService;
 import com.paperpilot.api.service.AnalysisTaskService;
@@ -28,6 +29,7 @@ import org.apache.ibatis.session.SqlSession;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -68,9 +70,13 @@ class TaskResultServiceTest {
             TaskProgressService noopProgress = new TaskProgressService(
                     new DefaultListableBeanFactory().getBeanProvider(StringRedisTemplate.class),
                     new TaskProgressProperties(), taskMapper);
+            TaskEventService noopEvents = new TaskEventService(
+                    new DefaultListableBeanFactory().getBeanProvider(StringRedisTemplate.class),
+                    new DefaultListableBeanFactory().getBeanProvider(RedisConnectionFactory.class),
+                    taskMapper, noopProgress, new TaskEventProperties());
             AnalysisTaskService taskService = new AnalysisTaskService(
                     taskMapper, projectMapper, fileMapper, paperMapper, repositoryMapper,
-                    stageService, new TaskEventService(), noopProgress, event -> {
+                    stageService, noopEvents, noopProgress, event -> {
                     });
             TaskResultService resultService = new TaskResultService(
                     taskService, stageService, paperMapper, repositoryMapper,

@@ -116,11 +116,7 @@ class TaskControllerTest {
 
     @Test
     void eventsIsSse() throws Exception {
-        AnalysisTask task = new AnalysisTask();
-        task.setId(7L);
-        task.setStatus(TaskStatus.QUEUED);
-        when(analysisTaskService.getTaskOrThrow(7L)).thenReturn(task);
-        when(taskEventService.subscribe(eq(7L), any())).thenReturn(new SseEmitter());
+        when(taskEventService.subscribe(7L)).thenReturn(new SseEmitter());
 
         mockMvc.perform(get("/api/v1/tasks/7/events").accept(MediaType.TEXT_EVENT_STREAM))
                 .andExpect(request().asyncStarted());

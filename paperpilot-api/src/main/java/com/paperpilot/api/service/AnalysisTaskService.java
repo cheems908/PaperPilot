@@ -138,8 +138,6 @@ public class AnalysisTaskService {
         }
         // 领域事件：事务提交后由 TaskCreatedEventListener 派发首阶段消息（幂等命中不发布）
         eventPublisher.publishEvent(new TaskCreatedEvent(task.getId(), requestKey));
-        taskEventService.publish(task.getId(),
-                TaskEvent.of(task.getId(), task.getStatus().name(), null, "任务已创建，等待执行"));
         return toResponse(task);
     }
 
@@ -176,8 +174,9 @@ public class AnalysisTaskService {
         }
         // 尚未执行的阶段同步标记 CANCELLED（条件更新，仅影响 PENDING/WAITING_RETRY）
         stageExecutionService.cancelPendingStages(taskId);
-        taskEventService.publish(taskId, TaskEvent.of(taskId, next.name(), null, "任务已取消"));
         progressService.update(taskId, TaskStatus.CANCELLED, null, 100, "任务已取消");
+        taskEventService.publish(taskId, TaskEventType.TASK_CANCELLED,
+                new TaskEventPayload(next.name(), null, 100, "任务已取消"));
         return toDetail(task);
     }
 
@@ -199,10 +198,11 @@ public class AnalysisTaskService {
             throw new ApiException(ErrorCode.CONFLICT, "任务状态已变更，请刷新后重试");
         }
         stageExecutionService.resetForRetry(taskId);
-        taskEventService.publish(taskId, TaskEvent.of(taskId, next.name(), null, "任务已重新入队"));
         // 重试重置进度：清 Redis 键后写回 0（不倒退守卫此时不阻塞）
         progressService.reset(taskId);
         progressService.update(taskId, TaskStatus.QUEUED, null, 0, "任务已重新入队");
+        taskEventService.publish(taskId, TaskEventType.STAGE_RETRYING,
+                new TaskEventPayload(next.name(), null, 0, "任务已重新入队"));
         return toDetail(task);
     }
 

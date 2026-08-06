@@ -1,21 +1,31 @@
 package com.paperpilot.api.service;
 
-import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.time.Instant;
+import java.util.UUID;
 
 /**
- * SSE 事件载荷.
+ * 统一任务事件（Redis Pub/Sub 广播 + SSE 推送）.
  *
- * <p>前端 {@code taskEventsPolicy.js} 依据 {@code state} 判定是否终态
- * （{@code SUCCEEDED / FAILED / CANCELLED} 均视为终态，连接自动关闭）。
+ * <p>含 schemaVersion / eventId / sequence / taskId / type / occurredAt / payload；
+ * 事件类型见 {@link TaskEventType}。payload 为小型进度元数据，不含大对象。
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record TaskEvent(
-        Long taskId,
-        String state,
-        String stage,
-        String message,
-        LocalDateTime at) {
+        @JsonProperty("schemaVersion") int schemaVersion,
+        @JsonProperty("eventId") String eventId,
+        @JsonProperty("sequence") long sequence,
+        @JsonProperty("taskId") Long taskId,
+        @JsonProperty("type") String type,
+        @JsonProperty("occurredAt") Instant occurredAt,
+        @JsonProperty("payload") Object payload) {
 
-    public static TaskEvent of(Long taskId, String state, String stage, String message) {
-        return new TaskEvent(taskId, state, stage, message, LocalDateTime.now());
+    public static final int SCHEMA_VERSION = 1;
+
+    public static TaskEvent of(long sequence, Long taskId, String type, Object payload) {
+        return new TaskEvent(SCHEMA_VERSION, UUID.randomUUID().toString(), sequence,
+                taskId, type, Instant.now(), payload);
     }
 }

@@ -81,7 +81,7 @@ class AnalysisTaskServiceTest {
             assertThat(task.getStatus()).isEqualTo(TaskStatus.CANCELLED);
         }
         verify(stageExecutionService, times(3)).cancelPendingStages(7L);
-        verify(taskEventService, times(3)).publish(eq(7L), any());
+        verify(taskEventService, times(3)).publish(eq(7L), any(), any());
     }
 
     @Test
@@ -93,7 +93,7 @@ class AnalysisTaskServiceTest {
 
         verify(analysisTaskMapper, never()).updateById(any(AnalysisTask.class));
         verify(stageExecutionService, never()).cancelPendingStages(any());
-        verify(taskEventService, never()).publish(anyLong(), any());
+        verify(taskEventService, never()).publish(anyLong(), any(), any());
     }
 
     @Test
@@ -139,7 +139,7 @@ class AnalysisTaskServiceTest {
         assertThat(resp.status()).isEqualTo("QUEUED");
         assertThat(task.getStatus()).isEqualTo(TaskStatus.QUEUED);
         verify(stageExecutionService).resetForRetry(7L);
-        verify(taskEventService).publish(eq(7L), any());
+        verify(taskEventService).publish(eq(7L), any(), any());
     }
 
     @Test

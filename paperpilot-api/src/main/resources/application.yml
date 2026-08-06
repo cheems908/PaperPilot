@@ -70,6 +70,13 @@ paperpilot:
   progress:
     key-prefix: ${TASK_PROGRESS_KEY_PREFIX:paperpilot:task}
     ttl: ${TASK_PROGRESS_TTL:24h}
+  # 任务事件（T4-02）：Redis Pub/Sub 频道 + SSE 心跳/连接数
+  event:
+    channel-prefix: ${TASK_EVENT_CHANNEL_PREFIX:paperpilot:task}
+    emitter-timeout: ${TASK_EVENT_EMITTER_TIMEOUT:2h}
+    heartbeat-interval: ${TASK_EVENT_HEARTBEAT_INTERVAL:20s}
+    max-connections-per-task: ${TASK_EVENT_MAX_PER_TASK:100}
+    max-global-connections: ${TASK_EVENT_MAX_GLOBAL:1000}
 
 # Actuator
 management:

@@ -63,6 +63,8 @@ class StageOrchestratorTest {
     @Mock
     com.paperpilot.api.progress.TaskProgressService progressService;
     @Mock
+    TaskEventService taskEventService;
+    @Mock
     TransactionTemplate txTemplate;
 
     StageOrchestrator orchestrator;
@@ -78,7 +80,8 @@ class StageOrchestratorTest {
     @BeforeEach
     void setUp() {
         orchestrator = new StageOrchestrator(taskMapper, stageExecutionMapper, workerClient,
-                codeSymbolPersistenceService, mappingPersistenceService, progressService, txTemplate);
+                codeSymbolPersistenceService, mappingPersistenceService, progressService,
+                taskEventService, txTemplate);
         // 让 mock 事务直接执行回调体（只测流程逻辑，事务语义由集成测试覆盖）。
         // lenient：提前返回的用例不会触及事务桩，避免 UnnecessaryStubbingException。
         lenient().when(txTemplate.execute(any(TransactionCallback.class))).thenAnswer(inv -> {

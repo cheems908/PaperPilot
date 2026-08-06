@@ -46,6 +46,7 @@ public class StageProgressionService {
     private final StageExecutionMapper stageExecutionMapper;
     private final StageMessageProducer stageMessageProducer;
     private final TaskProgressService progressService;
+    private final TaskEventService taskEventService;
     private final TransactionTemplate txTemplate;
 
     /** 推进到下一阶段或完成整个任务（当前阶段已由编排器标记 SUCCEEDED）。 */
@@ -128,5 +129,7 @@ public class StageProgressionService {
                         .set(AnalysisTask::getFinishedAt, LocalDateTime.now())));
         // 终态写 100% 并刷新 TTL（best-effort）
         progressService.update(taskId, TaskStatus.SUCCEEDED, null, 100, "任务完成");
+        taskEventService.publish(taskId, TaskEventType.TASK_COMPLETED,
+                new TaskEventPayload(TaskStatus.SUCCEEDED.name(), null, 100, "任务完成"));
     }
 }

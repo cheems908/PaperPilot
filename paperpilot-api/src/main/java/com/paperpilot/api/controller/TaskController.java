@@ -1,7 +1,6 @@
 package com.paperpilot.api.controller;
 
 import com.paperpilot.api.common.ApiResponse;
-import com.paperpilot.api.domain.entity.AnalysisTask;
 import com.paperpilot.api.dto.task.CreateTaskRequest;
 import com.paperpilot.api.dto.task.StageResponse;
 import com.paperpilot.api.dto.task.TaskDetailResponse;
@@ -9,7 +8,6 @@ import com.paperpilot.api.dto.task.TaskResponse;
 import com.paperpilot.api.dto.task.TaskResultResponse;
 import com.paperpilot.api.service.AnalysisTaskService;
 import com.paperpilot.api.service.StageExecutionService;
-import com.paperpilot.api.service.TaskEvent;
 import com.paperpilot.api.service.TaskEventService;
 import com.paperpilot.api.service.TaskResultService;
 import jakarta.validation.Valid;
@@ -62,12 +60,10 @@ public class TaskController {
         return ApiResponse.ok(taskResultService.getResult(taskId));
     }
 
-    /** 任务事件流（SSE）。连接后异步推送一次当前状态快照。 */
+    /** 任务事件流（SSE）：连接先推送当前 snapshot（MySQL + Redis），再收后续事件。 */
     @GetMapping(value = "/tasks/{taskId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter getEvents(@PathVariable Long taskId) {
-        AnalysisTask task = analysisTaskService.getTaskOrThrow(taskId);
-        return taskEventService.subscribe(taskId,
-                TaskEvent.of(taskId, task.getStatus().name(), null, "connected"));
+        return taskEventService.subscribe(taskId);
     }
 
     @PostMapping("/tasks/{taskId}/cancel")

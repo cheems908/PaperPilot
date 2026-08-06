@@ -62,6 +62,7 @@ public class StageOrchestrator {
     private final CodeSymbolPersistenceService codeSymbolPersistenceService;
     private final MappingPersistenceService mappingPersistenceService;
     private final TaskProgressService progressService;
+    private final TaskEventService taskEventService;
     private final TransactionTemplate txTemplate;
 
     /** 幂等编排入口。 */
@@ -91,6 +92,9 @@ public class StageOrchestrator {
         Long taskId = ctx.task().getId();
         progressService.update(taskId, TaskStatus.RUNNING, stage,
                 progressService.stageStart(stage), "开始阶段 " + stage);
+        taskEventService.publish(taskId, TaskEventType.STAGE_STARTED,
+                new TaskEventPayload(TaskStatus.RUNNING.name(), stage.name(),
+                        progressService.stageStart(stage), "开始阶段 " + stage));
 
         WorkerStageResponse response;
         try {
@@ -101,10 +105,14 @@ public class StageOrchestrator {
                     ? e.getRemoteErrorCode() : e.getErrorCode().name();
             saveFailure(ctx, errorCode, e.isRetryable(), e.getMessage());
             progressService.update(taskId, TaskStatus.FAILED, stage, 100, "阶段失败: " + errorCode);
+            taskEventService.publish(taskId, TaskEventType.TASK_FAILED,
+                    new TaskEventPayload(TaskStatus.FAILED.name(), stage.name(), 100, "阶段失败: " + errorCode));
             return StageExecutionResult.failed(ctx, errorCode, e.getMessage());
         } catch (Exception e) {
             saveFailure(ctx, "UNKNOWN", false, e.getMessage());
             progressService.update(taskId, TaskStatus.FAILED, stage, 100, "阶段失败: UNKNOWN");
+            taskEventService.publish(taskId, TaskEventType.TASK_FAILED,
+                    new TaskEventPayload(TaskStatus.FAILED.name(), stage.name(), 100, "阶段失败: UNKNOWN"));
             return StageExecutionResult.failed(ctx, "UNKNOWN", e.getMessage());
         }
 
@@ -123,6 +131,9 @@ public class StageOrchestrator {
         }
         progressService.update(taskId, TaskStatus.RUNNING, stage,
                 progressService.stageEnd(stage), stage + " 完成");
+        taskEventService.publish(taskId, TaskEventType.STAGE_COMPLETED,
+                new TaskEventPayload(TaskStatus.RUNNING.name(), stage.name(),
+                        progressService.stageEnd(stage), stage + " 完成"));
         log.info("阶段执行成功 stageExecutionId={} stage={} attempt={}",
                 ctx.stage().getId(), ctx.stage().getStage(), ctx.stage().getAttempt());
         return StageExecutionResult.succeeded(ctx);
