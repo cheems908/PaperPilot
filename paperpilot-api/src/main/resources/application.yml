@@ -66,6 +66,10 @@ paperpilot:
   mq:
     task-topic: ${TASK_MQ_TOPIC:paperpilot-analysis-stage}
     consumer-group: ${TASK_MQ_CONSUMER_GROUP:paperpilot-stage-orchestrator}
+  # 进度缓存（T4-01）：Redis 短期快照，MySQL 才是正式状态真相来源
+  progress:
+    key-prefix: ${TASK_PROGRESS_KEY_PREFIX:paperpilot:task}
+    ttl: ${TASK_PROGRESS_TTL:24h}
 
 # Actuator
 management:

@@ -59,6 +59,10 @@ class StageOrchestratorTest {
     @Mock
     CodeSymbolPersistenceService codeSymbolPersistenceService;
     @Mock
+    MappingPersistenceService mappingPersistenceService;
+    @Mock
+    com.paperpilot.api.progress.TaskProgressService progressService;
+    @Mock
     TransactionTemplate txTemplate;
 
     StageOrchestrator orchestrator;
@@ -74,7 +78,7 @@ class StageOrchestratorTest {
     @BeforeEach
     void setUp() {
         orchestrator = new StageOrchestrator(taskMapper, stageExecutionMapper, workerClient,
-                codeSymbolPersistenceService, txTemplate);
+                codeSymbolPersistenceService, mappingPersistenceService, progressService, txTemplate);
         // 让 mock 事务直接执行回调体（只测流程逻辑，事务语义由集成测试覆盖）。
         // lenient：提前返回的用例不会触及事务桩，避免 UnnecessaryStubbingException。
         lenient().when(txTemplate.execute(any(TransactionCallback.class))).thenAnswer(inv -> {
@@ -215,6 +219,25 @@ class StageOrchestratorTest {
         assertThat(r.success()).isTrue();
         // INDEX 阶段把符号委托给 code_symbol 持久化服务，且以任务 repositoryId 为键
         verify(codeSymbolPersistenceService).persist(eq(99L), any());
+    }
+
+    @Test
+    void mapStagePersistsMappingsAndStoresSummary() {
+        AnalysisTask task = task(TaskStatus.RUNNING);
+        task.setPaperId(5L);
+        task.setRepositoryId(99L);
+        when(taskMapper.selectById(7L)).thenReturn(task);
+        when(stageExecutionMapper.selectById(34L))
+                .thenReturn(stage(34L, 7L, TaskStage.MAP_CONCEPTS, 1, StageExecutionStatus.PENDING));
+        when(stageExecutionMapper.update(any(), any())).thenReturn(1);
+        when(workerClient.execute(any())).thenReturn(successResponse("0.1"));
+        when(mappingPersistenceService.persist(any(), any(), any())).thenReturn("{\"mappingCount\":2}");
+
+        StageExecutionResult r = orchestrator.orchestrate(message(7L, 34L, TaskStage.MAP_CONCEPTS, 1));
+
+        assertThat(r.success()).isTrue();
+        // MAP 阶段把映射委托给概念—代码映射持久化服务（以 paperId/repositoryId 为键）
+        verify(mappingPersistenceService).persist(eq(5L), eq(99L), any());
     }
 
     @Test

@@ -13,6 +13,7 @@ import com.paperpilot.api.dto.snapshot.StageSnapshotContract;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.mq.StageMessageProducer;
+import com.paperpilot.api.progress.TaskProgressService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,7 @@ public class StageProgressionService {
     private final AnalysisTaskMapper taskMapper;
     private final StageExecutionMapper stageExecutionMapper;
     private final StageMessageProducer stageMessageProducer;
+    private final TaskProgressService progressService;
     private final TransactionTemplate txTemplate;
 
     /** 推进到下一阶段或完成整个任务（当前阶段已由编排器标记 SUCCEEDED）。 */
@@ -124,5 +126,7 @@ public class StageProgressionService {
                         .eq(AnalysisTask::getStatus, TaskStatus.RUNNING)
                         .set(AnalysisTask::getStatus, TaskStatus.SUCCEEDED)
                         .set(AnalysisTask::getFinishedAt, LocalDateTime.now())));
+        // 终态写 100% 并刷新 TTL（best-effort）
+        progressService.update(taskId, TaskStatus.SUCCEEDED, null, 100, "任务完成");
     }
 }

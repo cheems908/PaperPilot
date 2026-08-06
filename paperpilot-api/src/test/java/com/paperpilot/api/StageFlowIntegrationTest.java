@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paperpilot.api.domain.entity.AnalysisTask;
 import com.paperpilot.api.domain.entity.File;
 import com.paperpilot.api.domain.entity.GitRepository;
+import com.paperpilot.api.domain.entity.Paper;
 import com.paperpilot.api.domain.entity.Project;
 import com.paperpilot.api.domain.entity.StageExecution;
 import com.paperpilot.api.domain.enums.StageExecutionStatus;
@@ -15,6 +16,7 @@ import com.paperpilot.api.dto.task.TaskResultResponse;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
 import com.paperpilot.api.mapper.FileMapper;
 import com.paperpilot.api.mapper.GitRepositoryMapper;
+import com.paperpilot.api.mapper.PaperMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.mq.StageMessageConsumer;
@@ -93,6 +95,8 @@ class StageFlowIntegrationTest {
     FileMapper fileMapper;
     @Autowired
     GitRepositoryMapper repositoryMapper;
+    @Autowired
+    PaperMapper paperMapper;
     @Autowired
     TaskResultService taskResultService;
 
@@ -246,15 +250,22 @@ class StageFlowIntegrationTest {
         project.setName("p");
         projectMapper.insert(project);
 
-        // INDEX_CODE 阶段会把符号持久化到 code_symbol（依赖 repository_id），故任务需带仓库
+        // INDEX/MAP 阶段分别把符号/映射持久化（依赖 repository_id 与 paper_id），故任务需带两者
         GitRepository repo = new GitRepository();
         repo.setProjectId(project.getId());
         repo.setGithubUrl("https://github.com/paperpilot/patchtst");
         repositoryMapper.insert(repo);
 
+        Paper paper = new Paper();
+        paper.setProjectId(project.getId());
+        paper.setTitle("PatchTST");
+        paper.setPdfUrl("http://example.com/paper.pdf");
+        paperMapper.insert(paper);
+
         AnalysisTask task = new AnalysisTask();
         task.setProjectId(project.getId());
         task.setRepositoryId(repo.getId());
+        task.setPaperId(paper.getId());
         task.setStatus(TaskStatus.RUNNING);
         task.setRequestKey("req-" + UUID.randomUUID());
         taskMapper.insert(task);

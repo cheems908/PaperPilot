@@ -30,6 +30,10 @@ class StageErrorCode:
     INVALID_INDEX_INPUT = "INVALID_INDEX_INPUT"
     CODE_INDEX_FAILED = "CODE_INDEX_FAILED"
 
+    # 概念—代码映射阶段（T3-05/T3-06）
+    INVALID_MAPPING_INPUT = "INVALID_MAPPING_INPUT"
+    MAPPING_VERIFICATION_FAILED = "MAPPING_VERIFICATION_FAILED"
+
 
 class StageServiceError(Exception):
     """阶段服务异常：携带稳定错误码、可重试标记与面向客户端的安全消息。"""

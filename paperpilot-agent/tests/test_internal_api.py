@@ -1,4 +1,7 @@
-"""内部阶段 API 契约测试（TestClient）：四接口 schema、重复一致性、统一错误、OpenAPI."""
+"""内部 API 通用契约（TestClient）：健康检查、统一错误、OpenAPI、模拟参数.
+
+四个阶段接口的具体契约分别在 test_internal_paper_api / test_internal_repository_api 覆盖。
+"""
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
@@ -6,22 +9,19 @@ from app.main import app
 
 client = TestClient(app)
 
-# PARSE_PAPER / CLONE_REPOSITORY / INDEX_CODE 已接入真实实现
-# （见 test_internal_paper_api / test_internal_repository_api / test_code_indexer），此处覆盖剩余确定性接口
-STAGE_ENDPOINTS = [
-    ("/internal/v1/mappings/generate", "MAP_CONCEPTS"),
+INTERNAL_PATHS = [
+    "/internal/health",
+    "/internal/v1/papers/parse",
+    "/internal/v1/repositories/clone",
+    "/internal/v1/repositories/index",
+    "/internal/v1/mappings/generate",
 ]
 
 
 def _payload(stage: str) -> dict:
     return {
-        "schemaVersion": 1,
-        "requestId": "req-1",
-        "taskId": 7,
-        "stageExecutionId": 34,
-        "stage": stage,
-        "attempt": 1,
-        "input": {},
+        "schemaVersion": 1, "requestId": "req-1", "taskId": 7,
+        "stageExecutionId": 34, "stage": stage, "attempt": 1, "input": {},
     }
 
 
@@ -33,26 +33,6 @@ def test_internal_health():
 
 def test_legacy_health_still_works():
     assert client.get("/health").status_code == 200
-
-
-def test_four_stage_endpoints_return_valid_schema():
-    for path, stage in STAGE_ENDPOINTS:
-        r = client.post(path, json=_payload(stage))
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert body["schemaVersion"] == 1
-        assert body["success"] is True
-        assert body["output"] is not None
-        assert body["artifacts"] == []
-        assert body["workerVersion"] == "fake-1.0.0"
-
-
-def test_same_input_repeated_is_identical():
-    payload = _payload("MAP_CONCEPTS")
-    a = client.post("/internal/v1/mappings/generate", json=payload)
-    b = client.post("/internal/v1/mappings/generate", json=payload)
-    assert a.status_code == 200
-    assert a.json() == b.json()
 
 
 def test_simulate_failure_returns_uniform_error_without_stack():
@@ -77,8 +57,6 @@ def test_missing_required_field_is_422():
 def test_openapi_has_internal_paths_and_deprecated_analyze():
     schema = client.get("/openapi.json").json()
     paths = schema["paths"]
-    for path, _ in STAGE_ENDPOINTS:
+    for path in INTERNAL_PATHS:
         assert path in paths
-    assert "/internal/health" in paths
-    # 旧接口保留但标记 deprecated
     assert paths["/api/analyze"]["post"].get("deprecated") is True

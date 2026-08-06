@@ -20,12 +20,16 @@ import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.PaperMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
+import com.paperpilot.api.progress.TaskProgressProperties;
+import com.paperpilot.api.progress.TaskProgressService;
 import com.paperpilot.api.service.AnalysisTaskService;
 import com.paperpilot.api.service.StageExecutionService;
 import com.paperpilot.api.service.TaskEventService;
 import org.apache.ibatis.session.SqlSession;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -62,9 +66,12 @@ class AnalysisTaskServicePersistenceTest {
 
             StageExecutionService stageService = new StageExecutionService(stageExecutionMapper);
             // 手工组装（无 Spring 上下文）：事件发布用 no-op，AFTER_COMMIT 派发由 TaskCreatedEventTest 覆盖
+            TaskProgressService noopProgress = new TaskProgressService(
+                    new DefaultListableBeanFactory().getBeanProvider(StringRedisTemplate.class),
+                    new TaskProgressProperties(), taskMapper);
             AnalysisTaskService taskService = new AnalysisTaskService(
                     taskMapper, projectMapper, fileMapper, paperMapper, repositoryMapper,
-                    stageService, new TaskEventService(), event -> {
+                    stageService, new TaskEventService(), noopProgress, event -> {
                     });
 
             Project project = new Project();

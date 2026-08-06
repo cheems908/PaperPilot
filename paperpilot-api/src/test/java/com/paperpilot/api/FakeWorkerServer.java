@@ -136,6 +136,22 @@ public final class FakeWorkerServer implements AutoCloseable {
                     + "\"stats\":{\"fileCount\":0,\"symbolCount\":0,\"warningCount\":0}},"
                     + "\"artifacts\":[],\"metrics\":{},\"workerVersion\":\"fake-1.0.0\"}";
         }
+        if ("MAP_CONCEPTS".equals(stage)) {
+            // MAP 阶段输出必须是合法 MappingOutput（含 concepts + candidates）
+            String commit = "f".repeat(40);
+            return "{\"schemaVersion\":1,\"success\":true,"
+                    + "\"output\":{\"commitSha\":\"" + commit + "\","
+                    + "\"concepts\":[{\"term\":\"channel independence\",\"source\":\"heading\","
+                    + "\"evidenceText\":\"The model applies channel independence.\","
+                    + "\"candidates\":[{\"symbolRef\":{\"filePath\":\"model.py\","
+                    + "\"qualifiedName\":\"PatchTST\",\"name\":\"PatchTST\",\"startLine\":5,"
+                    + "\"commitSha\":\"" + commit + "\"},"
+                    + "\"symbolScore\":0,\"keywordScore\":0,\"documentationScore\":1,\"totalScore\":0.2,"
+                    + "\"status\":\"NEEDS_REVIEW\",\"matchedTokens\":[\"channel\",\"independence\"],"
+                    + "\"codeEvidence\":\"docstring\"}]}],"
+                    + "\"stats\":{\"conceptCount\":1,\"candidateCount\":1,\"needsReviewCount\":1}},"
+                    + "\"artifacts\":[],\"metrics\":{},\"workerVersion\":\"fake-1.0.0\"}";
+        }
         return "{\"schemaVersion\":1,\"success\":true,"
                 + "\"output\":{\"stage\":\"" + stage + "\",\"ok\":true},"
                 + "\"artifacts\":[],\"metrics\":{},\"workerVersion\":\"fake-1.0.0\"}";

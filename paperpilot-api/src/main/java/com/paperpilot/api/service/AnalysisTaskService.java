@@ -24,6 +24,7 @@ import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.PaperMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
 import com.paperpilot.api.mq.TaskCreatedEvent;
+import com.paperpilot.api.progress.TaskProgressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
@@ -58,6 +59,7 @@ public class AnalysisTaskService {
     private final GitRepositoryMapper repositoryMapper;
     private final StageExecutionService stageExecutionService;
     private final TaskEventService taskEventService;
+    private final TaskProgressService progressService;
     private final ApplicationEventPublisher eventPublisher;
 
     /** 创建分析任务，返回 202 响应体（taskId/status/eventsUrl）。 */
@@ -175,6 +177,7 @@ public class AnalysisTaskService {
         // 尚未执行的阶段同步标记 CANCELLED（条件更新，仅影响 PENDING/WAITING_RETRY）
         stageExecutionService.cancelPendingStages(taskId);
         taskEventService.publish(taskId, TaskEvent.of(taskId, next.name(), null, "任务已取消"));
+        progressService.update(taskId, TaskStatus.CANCELLED, null, 100, "任务已取消");
         return toDetail(task);
     }
 
@@ -197,6 +200,9 @@ public class AnalysisTaskService {
         }
         stageExecutionService.resetForRetry(taskId);
         taskEventService.publish(taskId, TaskEvent.of(taskId, next.name(), null, "任务已重新入队"));
+        // 重试重置进度：清 Redis 键后写回 0（不倒退守卫此时不阻塞）
+        progressService.reset(taskId);
+        progressService.update(taskId, TaskStatus.QUEUED, null, 0, "任务已重新入队");
         return toDetail(task);
     }
 

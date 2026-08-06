@@ -30,6 +30,19 @@ class Settings(BaseSettings):
     max_source_file_bytes: int = 2 * 1024 * 1024  # 单文件 2MB
     max_parse_failure_ratio: float = 0.2  # 语法错误占比超过该阈值才终止阶段
 
+    # 概念—代码映射（T3-05/T3-06）
+    mapping_top_k: int = 5
+    mapping_high_threshold: float = 0.7  # 高分 + 验证通过 → VERIFIED
+    mapping_low_threshold: float = 0.3  # 低于该总分 → REJECTED
+
+    # Embedding 召回与 LLM 验证（T3-06）
+    embedding_dim: int = 64
+    llm_base_url: str = ""  # 空 → 使用确定性 fake verifier（测试）
+    llm_api_key: str = ""
+    llm_model: str = "gpt-4o-mini"
+    llm_timeout_seconds: float = 30.0
+    llm_prompt_version: str = "1"
+
     model_config = SettingsConfigDict(env_prefix="PAPERPILOT_", env_file=".env", extra="ignore")
 
 

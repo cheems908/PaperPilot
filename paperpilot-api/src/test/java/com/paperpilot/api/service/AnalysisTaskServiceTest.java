@@ -10,6 +10,7 @@ import com.paperpilot.api.mapper.FileMapper;
 import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.PaperMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
+import com.paperpilot.api.progress.TaskProgressService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,6 +51,8 @@ class AnalysisTaskServiceTest {
     @Mock
     TaskEventService taskEventService;
     @Mock
+    TaskProgressService progressService;
+    @Mock
     ApplicationEventPublisher eventPublisher;
 
     AnalysisTaskService service;
@@ -57,7 +60,8 @@ class AnalysisTaskServiceTest {
     @BeforeEach
     void setUp() {
         service = new AnalysisTaskService(analysisTaskMapper, projectMapper, fileMapper,
-                paperMapper, repositoryMapper, stageExecutionService, taskEventService, eventPublisher);
+                paperMapper, repositoryMapper, stageExecutionService, taskEventService,
+                progressService, eventPublisher);
     }
 
     // ── 取消 ──────────────────────────────────────────────────────────────

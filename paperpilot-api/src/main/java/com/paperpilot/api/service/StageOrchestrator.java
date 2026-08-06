@@ -18,6 +18,7 @@ import com.paperpilot.api.dto.worker.WorkerStageRequest;
 import com.paperpilot.api.dto.worker.WorkerStageResponse;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
+import com.paperpilot.api.progress.TaskProgressService;
 import com.paperpilot.api.worker.WorkerClient;
 import com.paperpilot.api.worker.WorkerException;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +60,8 @@ public class StageOrchestrator {
     private final StageExecutionMapper stageExecutionMapper;
     private final WorkerClient workerClient;
     private final CodeSymbolPersistenceService codeSymbolPersistenceService;
+    private final MappingPersistenceService mappingPersistenceService;
+    private final TaskProgressService progressService;
     private final TransactionTemplate txTemplate;
 
     /** 幂等编排入口。 */
@@ -83,6 +86,11 @@ public class StageOrchestrator {
         if (!Boolean.TRUE.equals(claimed)) {
             return StageExecutionResult.skipped(ctx, "未获得执行权（并发消费或阶段不可抢占）");
         }
+        // 正式状态（MySQL）已提交，再尽力更新 Redis 进度（best-effort，失败只告警）
+        TaskStage stage = ctx.stage().getStage();
+        Long taskId = ctx.task().getId();
+        progressService.update(taskId, TaskStatus.RUNNING, stage,
+                progressService.stageStart(stage), "开始阶段 " + stage);
 
         WorkerStageResponse response;
         try {
@@ -92,9 +100,11 @@ public class StageOrchestrator {
             String errorCode = e.getRemoteErrorCode() != null
                     ? e.getRemoteErrorCode() : e.getErrorCode().name();
             saveFailure(ctx, errorCode, e.isRetryable(), e.getMessage());
+            progressService.update(taskId, TaskStatus.FAILED, stage, 100, "阶段失败: " + errorCode);
             return StageExecutionResult.failed(ctx, errorCode, e.getMessage());
         } catch (Exception e) {
             saveFailure(ctx, "UNKNOWN", false, e.getMessage());
+            progressService.update(taskId, TaskStatus.FAILED, stage, 100, "阶段失败: UNKNOWN");
             return StageExecutionResult.failed(ctx, "UNKNOWN", e.getMessage());
         }
 
@@ -103,12 +113,16 @@ public class StageOrchestrator {
             saved = txTemplate.execute(tx -> saveSuccess(ctx, response));
         } catch (Exception e) {
             saveFailure(ctx, "RESULT_SAVE_FAILED", false, "结果落库失败: " + e.getMessage());
+            progressService.update(taskId, TaskStatus.FAILED, stage, 100, "结果落库失败");
             return StageExecutionResult.failed(ctx, "RESULT_SAVE_FAILED", "结果落库失败");
         }
         if (!Boolean.TRUE.equals(saved)) {
             saveFailure(ctx, "RESULT_SAVE_FAILED", false, "阶段非 RUNNING，结果未落库");
+            progressService.update(taskId, TaskStatus.FAILED, stage, 100, "结果落库失败");
             return StageExecutionResult.failed(ctx, "RESULT_SAVE_FAILED", "结果落库失败");
         }
+        progressService.update(taskId, TaskStatus.RUNNING, stage,
+                progressService.stageEnd(stage), stage + " 完成");
         log.info("阶段执行成功 stageExecutionId={} stage={} attempt={}",
                 ctx.stage().getId(), ctx.stage().getStage(), ctx.stage().getAttempt());
         return StageExecutionResult.succeeded(ctx);
@@ -222,10 +236,14 @@ public class StageOrchestrator {
 
     /** 业务结果（output snapshot）与阶段 SUCCEEDED 同事务提交；失败不标 SUCCEEDED。 */
     private boolean saveSuccess(StageExecutionContext ctx, WorkerStageResponse response) {
-        // INDEX_CODE：符号幂等 upsert 到 code_symbol，snapshot 只存摘要（避免 TEXT 溢出）
-        String outputJson = ctx.stage().getStage() == TaskStage.INDEX_CODE
-                ? codeSymbolPersistenceService.persist(ctx.task().getRepositoryId(), response)
-                : buildOutputSnapshotJson(response);
+        // INDEX_CODE：符号幂等 upsert 到 code_symbol；MAP_CONCEPTS：映射幂等写 concept_code_mapping；
+        // 两者 snapshot 只存摘要（避免 TEXT 溢出）
+        String outputJson = switch (ctx.stage().getStage()) {
+            case INDEX_CODE -> codeSymbolPersistenceService.persist(ctx.task().getRepositoryId(), response);
+            case MAP_CONCEPTS -> mappingPersistenceService.persist(
+                    ctx.task().getPaperId(), ctx.task().getRepositoryId(), response);
+            default -> buildOutputSnapshotJson(response);
+        };
         int updated = stageExecutionMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
                 .eq(StageExecution::getId, ctx.stage().getId())
                 .eq(StageExecution::getStatus, StageExecutionStatus.RUNNING)

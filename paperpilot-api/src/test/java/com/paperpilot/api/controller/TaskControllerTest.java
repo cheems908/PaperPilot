@@ -90,11 +90,13 @@ class TaskControllerTest {
     @Test
     void getResult() throws Exception {
         when(taskResultService.getResult(7L))
-                .thenReturn(new TaskResultResponse(7L, "QUEUED", null, null, List.of(), Map.of()));
+                .thenReturn(new TaskResultResponse(7L, "QUEUED", null, null, List.of(), Map.of(),
+                        "NO_MAPPINGS", List.of()));
         mockMvc.perform(get("/api/v1/tasks/7/result"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.taskId").value(7))
-                .andExpect(jsonPath("$.data.status").value("QUEUED"));
+                .andExpect(jsonPath("$.data.status").value("QUEUED"))
+                .andExpect(jsonPath("$.data.mappingStatus").value("NO_MAPPINGS"));
     }
 
     @Test
