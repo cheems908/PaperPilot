@@ -7,3 +7,8 @@ spring:
       - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
       - org.apache.rocketmq.spring.autoconfigure.RocketMQAutoConfiguration
       - com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure
+
+# 测试通过显式调用 RetryScheduler 验证；关闭后台线程，避免 Testcontainers 上下文销毁后继续扫描。
+paperpilot:
+  retry:
+    scheduling-enabled: false

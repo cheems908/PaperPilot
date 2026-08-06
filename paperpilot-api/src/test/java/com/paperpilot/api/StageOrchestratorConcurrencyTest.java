@@ -147,7 +147,7 @@ class StageOrchestratorConcurrencyTest {
     }
 
     @Test
-    void workerFailureDoesNotMarkSuccessAndErrorQueryable() {
+    void retryableWorkerFailureWaitsForRetryAndErrorIsQueryable() {
         when(workerClient.execute(any())).thenThrow(new WorkerException(WorkerErrorCode.HTTP_5XX, 500, "boom"));
         long[] ids = insertTaskAndStage();
 
@@ -156,18 +156,41 @@ class StageOrchestratorConcurrencyTest {
 
         assertThat(r.success()).isFalse();
         StageExecution stage = stageExecutionMapper.selectById(ids[1]);
-        assertThat(stage.getStatus()).isEqualTo(StageExecutionStatus.FAILED);
+        assertThat(stage.getStatus()).isEqualTo(StageExecutionStatus.WAITING_RETRY);
         assertThat(stage.getErrorSnapshot())
-                .contains("\"errorCode\":\"HTTP_5XX\"")
+                .contains("\"errorCode\":\"WORKER_UNAVAILABLE\"")
                 .contains("\"retryable\":true");
+        assertThat(stage.getNextRetryAt()).isNotNull();
         assertThat(stage.getOutputSnapshot()).isNull();
-        // 任务 RUNNING→FAILED（经状态机）
+        // 任务 RUNNING→WAITING_RETRY（经状态机）
+        assertThat(taskMapper.selectById(ids[0]).getStatus()).isEqualTo(TaskStatus.WAITING_RETRY);
+    }
+
+    @Test
+    void exhaustedRetryableFailureBecomesTerminalFailed() {
+        when(workerClient.execute(any())).thenThrow(new WorkerException(WorkerErrorCode.TIMEOUT, 0, "timeout"));
+        long[] ids = insertTaskAndStage(4);
+
+        StageExecutionResult r = orchestrator.orchestrate(
+                StageTaskMessage.create(ids[0], ids[1], TaskStage.PARSE_PAPER, 4));
+
+        assertThat(r.success()).isFalse();
+        StageExecution stage = stageExecutionMapper.selectById(ids[1]);
+        assertThat(stage.getStatus()).isEqualTo(StageExecutionStatus.FAILED);
+        assertThat(stage.getNextRetryAt()).isNull();
+        assertThat(stage.getErrorSnapshot())
+                .contains("\"errorCode\":\"WORKER_TIMEOUT\"")
+                .contains("\"retryable\":false");
         assertThat(taskMapper.selectById(ids[0]).getStatus()).isEqualTo(TaskStatus.FAILED);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────
 
     private long[] insertTaskAndStage() {
+        return insertTaskAndStage(1);
+    }
+
+    private long[] insertTaskAndStage(int attempt) {
         Project project = new Project();
         project.setName("p");
         projectMapper.insert(project);
@@ -181,7 +204,7 @@ class StageOrchestratorConcurrencyTest {
         StageExecution stage = new StageExecution();
         stage.setTaskId(task.getId());
         stage.setStage(TaskStage.PARSE_PAPER);
-        stage.setAttempt(1);
+        stage.setAttempt(attempt);
         stage.setStatus(StageExecutionStatus.PENDING);
         stageExecutionMapper.insert(stage);
         return new long[]{task.getId(), stage.getId()};

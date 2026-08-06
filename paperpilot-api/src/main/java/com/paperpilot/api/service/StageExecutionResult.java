@@ -1,7 +1,8 @@
 package com.paperpilot.api.service;
 
 /**
- * 单阶段编排结果：消费方据此决定 ACK 语义；具体重试调度属 T4.
+ * 单阶段编排结果：消费方据此决定 ACK 语义；失败可能已进入 WAITING_RETRY，
+ * 后续由 MySQL 到期扫描器重新派发，当前 MQ 消息仍然 ACK。
  *
  * <p>{@code skipped=true} 表示未调用 Worker（幂等命中 / 未获得执行权 / 引用不符）。
  */
@@ -23,7 +24,7 @@ public record StageExecutionResult(
         return new StageExecutionResult(ctx.stage().getId(), true, true, false, null);
     }
 
-    /** Worker 失败或结果落库失败：阶段标记 FAILED（不标 SUCCEEDED），错误可查询。 */
+    /** Worker 失败或结果落库失败：阶段进入 WAITING_RETRY 或 FAILED，错误可查询。 */
     public static StageExecutionResult failed(StageExecutionContext ctx, String errorCode, String detail) {
         return new StageExecutionResult(ctx.stage().getId(), true, false, false,
                 errorCode + (detail == null || detail.isBlank() ? "" : ": " + detail));

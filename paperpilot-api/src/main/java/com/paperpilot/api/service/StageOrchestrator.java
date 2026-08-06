@@ -19,6 +19,9 @@ import com.paperpilot.api.dto.worker.WorkerStageResponse;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.progress.TaskProgressService;
+import com.paperpilot.api.retry.RetryPolicy;
+import com.paperpilot.api.retry.StageErrorClassifier;
+import com.paperpilot.api.retry.StageFailureOutcome;
 import com.paperpilot.api.worker.WorkerClient;
 import com.paperpilot.api.worker.WorkerException;
 import lombok.RequiredArgsConstructor;
@@ -47,8 +50,8 @@ import java.util.Objects;
  *   <li>短事务内原子保存业务结果（output snapshot）与阶段 SUCCEEDED。</li>
  * </ol>
  *
- * <p>本卡不发送下一阶段消息、不以 Redis 分布式锁为正确性基础；
- * Worker 失败只形成结构化失败结果（错误快照），重试调度属 T4。
+ * <p>本组件不发送下一阶段消息、不以 Redis 分布式锁为正确性基础；
+ * Worker 失败经唯一错误分类器进入 WAITING_RETRY 或最终 FAILED，到期派发由 RetryScheduler 完成。
  */
 @Component
 @RequiredArgsConstructor
@@ -63,6 +66,8 @@ public class StageOrchestrator {
     private final MappingPersistenceService mappingPersistenceService;
     private final TaskProgressService progressService;
     private final TaskEventService taskEventService;
+    private final StageErrorClassifier errorClassifier;
+    private final RetryPolicy retryPolicy;
     private final TransactionTemplate txTemplate;
 
     /** 幂等编排入口。 */
@@ -103,16 +108,11 @@ public class StageOrchestrator {
             // 优先透传远端业务错误码（如 INVALID_PDF），缺省用 Java 分类
             String errorCode = e.getRemoteErrorCode() != null
                     ? e.getRemoteErrorCode() : e.getErrorCode().name();
-            saveFailure(ctx, errorCode, e.isRetryable(), e.getMessage());
-            progressService.update(taskId, TaskStatus.FAILED, stage, 100, "阶段失败: " + errorCode);
-            taskEventService.publish(taskId, TaskEventType.TASK_FAILED,
-                    new TaskEventPayload(TaskStatus.FAILED.name(), stage.name(), 100, "阶段失败: " + errorCode));
+            errorCode = errorClassifier.normalize(errorCode);
+            handleFailurePresentation(ctx, errorCode, e.getMessage());
             return StageExecutionResult.failed(ctx, errorCode, e.getMessage());
         } catch (Exception e) {
-            saveFailure(ctx, "UNKNOWN", false, e.getMessage());
-            progressService.update(taskId, TaskStatus.FAILED, stage, 100, "阶段失败: UNKNOWN");
-            taskEventService.publish(taskId, TaskEventType.TASK_FAILED,
-                    new TaskEventPayload(TaskStatus.FAILED.name(), stage.name(), 100, "阶段失败: UNKNOWN"));
+            handleFailurePresentation(ctx, "UNKNOWN", e.getMessage());
             return StageExecutionResult.failed(ctx, "UNKNOWN", e.getMessage());
         }
 
@@ -120,12 +120,12 @@ public class StageOrchestrator {
         try {
             saved = txTemplate.execute(tx -> saveSuccess(ctx, response));
         } catch (Exception e) {
-            saveFailure(ctx, "RESULT_SAVE_FAILED", false, "结果落库失败: " + e.getMessage());
+            handleFailurePresentation(ctx, "RESULT_SAVE_FAILED", "结果落库失败: " + e.getMessage());
             progressService.update(taskId, TaskStatus.FAILED, stage, 100, "结果落库失败");
             return StageExecutionResult.failed(ctx, "RESULT_SAVE_FAILED", "结果落库失败");
         }
         if (!Boolean.TRUE.equals(saved)) {
-            saveFailure(ctx, "RESULT_SAVE_FAILED", false, "阶段非 RUNNING，结果未落库");
+            handleFailurePresentation(ctx, "RESULT_SAVE_FAILED", "阶段非 RUNNING，结果未落库");
             progressService.update(taskId, TaskStatus.FAILED, stage, 100, "结果落库失败");
             return StageExecutionResult.failed(ctx, "RESULT_SAVE_FAILED", "结果落库失败");
         }
@@ -286,29 +286,67 @@ public class StageOrchestrator {
         }
     }
 
-    /** Worker 失败 / 结果落库失败：写结构化错误快照并标记阶段 FAILED（不标 SUCCEEDED）。 */
-    private void saveFailure(StageExecutionContext ctx, String errorCode, boolean retryable, String message) {
+    private void handleFailurePresentation(StageExecutionContext ctx, String errorCode, String message) {
+        StageFailureOutcome outcome = saveFailure(ctx, errorCode, message);
+        TaskStage stage = ctx.stage().getStage();
+        Long taskId = ctx.task().getId();
+        if (outcome.retryScheduled()) {
+            String display = "阶段将在 " + outcome.nextRetryAt() + " 重试: " + errorCode;
+            progressService.update(taskId, TaskStatus.WAITING_RETRY, stage,
+                    progressService.stageStart(stage), display);
+            taskEventService.publish(taskId, TaskEventType.STAGE_RETRYING,
+                    new TaskEventPayload(TaskStatus.WAITING_RETRY.name(), stage.name(),
+                            progressService.stageStart(stage), display));
+        } else {
+            progressService.update(taskId, TaskStatus.FAILED, stage, 100, "阶段失败: " + errorCode);
+            taskEventService.publish(taskId, TaskEventType.TASK_FAILED,
+                    new TaskEventPayload(TaskStatus.FAILED.name(), stage.name(), 100,
+                            "阶段失败: " + errorCode));
+        }
+    }
+
+    /** Worker/落库失败：唯一分类器决定 WAITING_RETRY 或最终 FAILED，并保存错误快照。 */
+    private StageFailureOutcome saveFailure(StageExecutionContext ctx, String errorCode, String message) {
         try {
+            boolean retryable = errorClassifier.isRetryable(errorCode)
+                    && retryPolicy.canRetry(ctx.stage().getAttempt());
+            LocalDateTime nextRetryAt = retryable
+                    ? LocalDateTime.now().plus(retryPolicy.backoffAfter(ctx.stage().getAttempt()).orElseThrow())
+                    : null;
             StageErrorSnapshot error = new StageErrorSnapshot(
                     StageSnapshotContract.SCHEMA_VERSION, errorCode, retryable, message, Instant.now());
             String json = StageSnapshotCodec.toJson(error);
-            txTemplate.executeWithoutResult(tx -> {
-                stageExecutionMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
+            Boolean saved = txTemplate.execute(tx -> {
+                StageExecutionStatus stageTarget = retryable
+                        ? StageExecutionStatus.WAITING_RETRY : StageExecutionStatus.FAILED;
+                int stageUpdated = stageExecutionMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
                         .eq(StageExecution::getId, ctx.stage().getId())
                         .eq(StageExecution::getStatus, StageExecutionStatus.RUNNING)
-                        .set(StageExecution::getStatus, StageExecutionStatus.FAILED)
+                        .set(StageExecution::getStatus, stageTarget)
                         .set(StageExecution::getErrorSnapshot, json)
                         .set(StageExecution::getErrorMessage, message)
+                        .set(StageExecution::getNextRetryAt, nextRetryAt)
                         .set(StageExecution::getFinishedAt, LocalDateTime.now()));
-                // 任务 RUNNING→FAILED（claim 成功后任务必为 RUNNING；条件更新兜底）
-                TaskStateMachine.transition(TaskStatus.RUNNING, TaskStatus.FAILED);
-                taskMapper.update(null, new LambdaUpdateWrapper<AnalysisTask>()
+                TaskStatus taskTarget = retryable ? TaskStatus.WAITING_RETRY : TaskStatus.FAILED;
+                TaskStateMachine.transition(TaskStatus.RUNNING, taskTarget);
+                int taskUpdated = taskMapper.update(null, new LambdaUpdateWrapper<AnalysisTask>()
                         .eq(AnalysisTask::getId, ctx.task().getId())
                         .eq(AnalysisTask::getStatus, TaskStatus.RUNNING)
-                        .set(AnalysisTask::getStatus, TaskStatus.FAILED));
+                        .set(AnalysisTask::getStatus, taskTarget));
+                if (stageUpdated != 1 || taskUpdated != 1) {
+                    tx.setRollbackOnly();
+                    return false;
+                }
+                return true;
             });
+            if (!Boolean.TRUE.equals(saved)) {
+                log.warn("阶段失败状态未落库（并发状态已变化） stageExecutionId={}", ctx.stage().getId());
+                return StageFailureOutcome.terminal();
+            }
+            return retryable ? StageFailureOutcome.retryAt(nextRetryAt) : StageFailureOutcome.terminal();
         } catch (Exception e) {
             log.error("保存阶段失败结果失败 stageExecutionId={}", ctx.stage().getId(), e);
+            return StageFailureOutcome.terminal();
         }
     }
 }

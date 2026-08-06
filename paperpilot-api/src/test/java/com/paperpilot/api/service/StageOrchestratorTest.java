@@ -15,6 +15,9 @@ import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.worker.WorkerClient;
 import com.paperpilot.api.worker.WorkerErrorCode;
 import com.paperpilot.api.worker.WorkerException;
+import com.paperpilot.api.retry.RetryPolicy;
+import com.paperpilot.api.retry.RetryProperties;
+import com.paperpilot.api.retry.StageErrorClassifier;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,6 +69,8 @@ class StageOrchestratorTest {
     TaskEventService taskEventService;
     @Mock
     TransactionTemplate txTemplate;
+    @Mock
+    TransactionStatus transactionStatus;
 
     StageOrchestrator orchestrator;
 
@@ -81,13 +86,14 @@ class StageOrchestratorTest {
     void setUp() {
         orchestrator = new StageOrchestrator(taskMapper, stageExecutionMapper, workerClient,
                 codeSymbolPersistenceService, mappingPersistenceService, progressService,
-                taskEventService, txTemplate);
+                taskEventService, new StageErrorClassifier(),
+                new RetryPolicy(new RetryProperties()), txTemplate);
         // 让 mock 事务直接执行回调体（只测流程逻辑，事务语义由集成测试覆盖）。
         // lenient：提前返回的用例不会触及事务桩，避免 UnnecessaryStubbingException。
         lenient().when(txTemplate.execute(any(TransactionCallback.class))).thenAnswer(inv -> {
             @SuppressWarnings("unchecked")
             TransactionCallback<Boolean> cb = inv.getArgument(0);
-            return cb.doInTransaction(null);
+            return cb.doInTransaction(transactionStatus);
         });
         lenient().doAnswer(inv -> {
             @SuppressWarnings("unchecked")

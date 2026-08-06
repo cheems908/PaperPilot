@@ -77,6 +77,12 @@ paperpilot:
     heartbeat-interval: ${TASK_EVENT_HEARTBEAT_INTERVAL:20s}
     max-connections-per-task: ${TASK_EVENT_MAX_PER_TASK:100}
     max-global-connections: ${TASK_EVENT_MAX_GLOBAL:1000}
+  # 自动重试（T4-03）：attempt=1/2/3 失败后分别退避 10s/30s/120s，最多执行 4 次
+  retry:
+    scheduling-enabled: ${TASK_RETRY_SCHEDULING_ENABLED:true}
+    max-attempts: ${TASK_RETRY_MAX_ATTEMPTS:4}
+    scan-batch-size: ${TASK_RETRY_SCAN_BATCH_SIZE:100}
+    scan-interval: ${TASK_RETRY_SCAN_INTERVAL:PT5S}
 
 # Actuator
 management:

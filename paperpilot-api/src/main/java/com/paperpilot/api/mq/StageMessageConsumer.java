@@ -15,7 +15,8 @@ import org.springframework.stereotype.Component;
  * 阶段消息消费者：反序列化校验 → 调用幂等编排器 → 成功后推进下一阶段.
  *
  * <p>非法消息（JSON 解析/契约校验失败）直接 ACK 丢弃，避免无限重投；
- * 编排器返回 failed/skipped 均 ACK（重试调度属 T4，不在此处重投）。
+ * 编排器返回 failed/skipped 均 ACK；可重试失败由 MySQL 到期扫描器生成新 attempt，
+ * 不依赖 RocketMQ 对当前消息重投。
  */
 @Component
 @RocketMQMessageListener(
@@ -45,6 +46,6 @@ public class StageMessageConsumer implements RocketMQListener<String> {
             log.info("阶段执行失败 stageExecutionId={} detail={}",
                     result.stageExecutionId(), result.detail());
         }
-        // skipped/failed 均 ACK；重试调度属 T4
+        // skipped/failed 均 ACK；自动重试由 RetryScheduler 生成新 attempt 消息
     }
 }

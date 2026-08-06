@@ -191,11 +191,12 @@ class StageFlowIntegrationTest {
 
             AnalysisTask task = taskMapper.selectById(taskId);
             assertThat(task.getStatus()).isNotEqualTo(TaskStatus.SUCCEEDED);
-            assertThat(task.getStatus()).isEqualTo(TaskStatus.FAILED);
+            assertThat(task.getStatus()).isEqualTo(TaskStatus.WAITING_RETRY);
             StageExecution stage = stageExecutionMapper.selectById(parse.getId());
-            assertThat(stage.getStatus()).isEqualTo(StageExecutionStatus.FAILED);
-            // 结构化错误快照可查询（worker 503 → HTTP_5XX）
-            assertThat(stage.getErrorSnapshot()).contains("HTTP_5XX");
+            assertThat(stage.getStatus()).isEqualTo(StageExecutionStatus.WAITING_RETRY);
+            assertThat(stage.getNextRetryAt()).isNotNull();
+            // 结构化错误快照可查询（worker 503 规范化为稳定码 WORKER_UNAVAILABLE）
+            assertThat(stage.getErrorSnapshot()).contains("WORKER_UNAVAILABLE");
         } finally {
             FAKE_WORKER.setUnavailable(false);
         }
