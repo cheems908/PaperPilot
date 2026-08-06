@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "benchmarkId": "patchtst-iclr2023-v1",
+  "paper": {
+    "title": "A Time Series is Worth 64 Words: Long-term Forecasting with Transformers",
+    "venue": "ICLR 2023",
+    "version": "Published conference paper, generated 2023-03-07",
+    "sourceUrl": "https://openreview.net/forum?id=Jbdc0vTOcol",
+    "downloadUrl": "https://openreview.net/pdf?id=Jbdc0vTOcol",
+    "arxivId": "2211.14730",
+    "sha256": "ffd4021d25b4959883242f256b0fe4ec42f477f66db78c61bfacf7baa7848b0e",
+    "sizeBytes": 4027069,
+    "pageCount": 24,
+    "redistribution": "PDF is not committed; download it from the publisher and verify SHA-256."
+  },
+  "repository": {
+    "url": "https://github.com/yuqinie98/PatchTST.git",
+    "commitSha": "204c21efe0b39603ad6e2ca640ef5896646ab1a9",
+    "commitDate": "2023-08-11T08:40:14+08:00",
+    "license": "Apache-2.0",
+    "licenseFileSha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+  },
+  "evaluation": {
+    "rankingUnit": "commitSha + filePath + qualifiedName",
+    "metrics": ["Precision@1", "Precision@3", "Precision@5", "Recall@1", "Recall@3", "Recall@5", "MRR", "evidenceCompleteness"],
+    "noExplicitImplementationPolicy": "Excluded from ranking denominators and reported separately as abstention cases."
+  }
+}

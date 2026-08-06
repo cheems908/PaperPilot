@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "benchmarkId": "patchtst-iclr2023-v1",
+  "paper": {
+    "sha256": "ffd4021d25b4959883242f256b0fe4ec42f477f66db78c61bfacf7baa7848b0e",
+    "title": "A Time Series is Worth 64 Words: Long-term Forecasting with Transformers"
+  },
+  "repository": {
+    "url": "https://github.com/yuqinie98/PatchTST.git",
+    "commitSha": "204c21efe0b39603ad6e2ca640ef5896646ab1a9"
+  },
+  "concepts": [
+    {
+      "id": "PT-01", "concept": "Time-series patching", "section": "3.1 PatchTST", "page": 4,
+      "evidence": "Each input univariate time series is divided into patches that may overlap or not overlap.",
+      "certainty": "CONFIRMED", "annotation": "Tensor unfold is the direct supervised implementation of paper patching.",
+      "mappings": [{"filePath": "PatchTST_supervised/layers/PatchTST_backbone.py", "qualifiedName": "PatchTST_backbone.forward", "startLine": 60, "endLine": 82, "role": "PRIMARY"}]
+    },
+    {
+      "id": "PT-02", "concept": "Channel-independent shared Transformer", "section": "3.1 PatchTST", "page": 4,
+      "evidence": "Channels share one Transformer backbone while their forward processes remain independent.",
+      "certainty": "CONFIRMED", "annotation": "Channels are folded into the batch dimension before the shared encoder.",
+      "mappings": [{"filePath": "PatchTST_supervised/layers/PatchTST_backbone.py", "qualifiedName": "TSTiEncoder.forward", "startLine": 157, "endLine": 172, "role": "PRIMARY"}]
+    },
+    {
+      "id": "PT-03", "concept": "Patch projection and learnable positional encoding", "section": "3.1 Transformer Encoder", "page": 4,
+      "evidence": "Patches are linearly projected and combined with a learnable additive position encoding.",
+      "certainty": "CONFIRMED", "annotation": "The encoder constructor creates both projection and positional encoding.",
+      "mappings": [
+        {"filePath": "PatchTST_supervised/layers/PatchTST_backbone.py", "qualifiedName": "TSTiEncoder.__init__", "startLine": 129, "endLine": 154, "role": "PRIMARY"},
+        {"filePath": "PatchTST_supervised/layers/PatchTST_layers.py", "qualifiedName": "positional_encoding", "startLine": 96, "endLine": 121, "role": "SUPPORTING"}
+      ]
+    },
+    {
+      "id": "PT-04", "concept": "Vanilla Transformer encoder stack", "section": "3.1 Transformer Encoder", "page": 4,
+      "evidence": "A vanilla Transformer encoder maps observed patch signals to latent representations.",
+      "certainty": "CONFIRMED", "annotation": "The stack applies repeated encoder layers with optional residual attention.",
+      "mappings": [{"filePath": "PatchTST_supervised/layers/PatchTST_backbone.py", "qualifiedName": "TSTEncoder.forward", "startLine": 189, "endLine": 197, "role": "PRIMARY"}]
+    },
+    {
+      "id": "PT-05", "concept": "Multi-head self-attention", "section": "3.1 Transformer Encoder", "page": 4,
+      "evidence": "Each attention head transforms patch representations into query, key, and value matrices.",
+      "certainty": "CONFIRMED", "annotation": "The implementation projects Q/K/V per head and combines attention outputs.",
+      "mappings": [{"filePath": "PatchTST_supervised/layers/PatchTST_backbone.py", "qualifiedName": "_MultiheadAttention.forward", "startLine": 298, "endLine": 322, "role": "PRIMARY"}]
+    },
+    {
+      "id": "PT-06", "concept": "Scaled dot-product and residual attention", "section": "3.1 Transformer Encoder", "page": 5,
+      "evidence": "Attention uses scaled query-key products; encoder blocks include residual connections.",
+      "certainty": "CONFIRMED", "annotation": "This symbol computes scaled scores and optionally adds previous-layer scores.",
+      "mappings": [{"filePath": "PatchTST_supervised/layers/PatchTST_backbone.py", "qualifiedName": "_ScaledDotProductAttention.forward", "startLine": 338, "endLine": 378, "role": "PRIMARY"}]
+    },
+    {
+      "id": "PT-07", "concept": "Flatten and linear forecasting head", "section": "3.1 Transformer Encoder", "page": 5,
+      "evidence": "A flatten layer followed by a linear head produces the forecast horizon.",
+      "certainty": "CONFIRMED", "annotation": "The head flattens patch representations and applies a linear projection.",
+      "mappings": [{"filePath": "PatchTST_supervised/layers/PatchTST_backbone.py", "qualifiedName": "Flatten_Head.forward", "startLine": 110, "endLine": 123, "role": "PRIMARY"}]
+    },
+    {
+      "id": "PT-08", "concept": "Instance normalization and denormalization", "section": "3.1 Instance Normalization", "page": 5,
+      "evidence": "Each series is normalized before patching, with its statistics restored to predictions.",
+      "certainty": "CONFIRMED", "annotation": "Normalization and inverse transformation form an intentional one-to-many mapping.",
+      "mappings": [
+        {"filePath": "PatchTST_supervised/layers/RevIN.py", "qualifiedName": "RevIN._normalize", "startLine": 43, "endLine": 52, "role": "PRIMARY"},
+        {"filePath": "PatchTST_supervised/layers/RevIN.py", "qualifiedName": "RevIN._denormalize", "startLine": 54, "endLine": 63, "role": "PRIMARY"}
+      ]
+    },
+    {
+      "id": "PT-09", "concept": "Masked patch pre-training", "section": "3.2 Representation Learning", "page": 5,
+      "evidence": "Randomly removed patches are reconstructed during self-supervised representation learning.",
+      "certainty": "CONFIRMED", "annotation": "Mask creation and reconstruction head jointly implement the pretext task.",
+      "mappings": [
+        {"filePath": "PatchTST_self_supervised/src/callback/patch_mask.py", "qualifiedName": "random_masking", "startLine": 106, "endLine": 135, "role": "PRIMARY"},
+        {"filePath": "PatchTST_self_supervised/src/models/patchTST.py", "qualifiedName": "PretrainHead.forward", "startLine": 162, "endLine": 171, "role": "PRIMARY"}
+      ]
+    },
+    {
+      "id": "PT-10", "concept": "Self-supervised patch construction helper", "section": "3.2 Representation Learning", "page": 5,
+      "evidence": "Patch-level masking requires converting each sequence into a regular sequence of patches.",
+      "certainty": "AUXILIARY", "annotation": "A support utility rather than the conceptual model itself; retained as a boundary case.",
+      "mappings": [{"filePath": "PatchTST_self_supervised/src/callback/patch_mask.py", "qualifiedName": "create_patch", "startLine": 73, "endLine": 84, "role": "SUPPORTING"}]
+    },
+    {
+      "id": "PT-11", "concept": "Optional series decomposition wrapper", "section": "Appendix implementation detail", "page": 17,
+      "evidence": "The implementation optionally combines trend and residual forecasts around the PatchTST backbone.",
+      "certainty": "LOW_CONFIDENCE", "annotation": "Implementation extension with weak direct support in the core paper; tests low-confidence handling.",
+      "mappings": [{"filePath": "PatchTST_supervised/models/PatchTST.py", "qualifiedName": "Model.forward", "startLine": 80, "endLine": 92, "role": "SUPPORTING"}]
+    },
+    {
+      "id": "PT-12", "concept": "Overall MSE forecasting objective", "section": "3.1 Loss Function", "page": 5,
+      "evidence": "Per-channel squared forecasting errors are averaged into the overall training objective.",
+      "certainty": "NO_EXPLICIT_IMPLEMENTATION", "annotation": "Loss wiring lives in training configuration, not a stable named model symbol at the frozen commit.",
+      "mappings": []
+    }
+  ]
+}

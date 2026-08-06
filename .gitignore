@@ -18,6 +18,9 @@ dist/
 venv/
 *.so
 
+# 本地论文原文（基准只提交来源、版本与 checksum，不提交 PDF）
+paperpilot-agent/data/papers/*.pdf
+
 # IDE
 .idea/
 .vscode/

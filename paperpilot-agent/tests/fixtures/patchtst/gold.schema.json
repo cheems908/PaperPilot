@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paperpilot.local/schema/patchtst-gold-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "benchmarkId", "paper", "repository", "concepts"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "benchmarkId": {"type": "string", "minLength": 1},
+    "paper": {"$ref": "#/$defs/paper"},
+    "repository": {"$ref": "#/$defs/repository"},
+    "concepts": {"type": "array", "minItems": 10, "maxItems": 20, "items": {"$ref": "#/$defs/concept"}}
+  },
+  "$defs": {
+    "paper": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sha256", "title"],
+      "properties": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "title": {"type": "string", "minLength": 1}}
+    },
+    "repository": {
+      "type": "object", "additionalProperties": false,
+      "required": ["url", "commitSha"],
+      "properties": {"url": {"type": "string", "format": "uri"}, "commitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}}
+    },
+    "concept": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "concept", "section", "page", "evidence", "certainty", "annotation", "mappings"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^PT-[0-9]{2}$"},
+        "concept": {"type": "string", "minLength": 2},
+        "section": {"type": "string", "minLength": 1},
+        "page": {"type": "integer", "minimum": 1, "maximum": 24},
+        "evidence": {"type": "string", "minLength": 8, "maxLength": 500},
+        "certainty": {"enum": ["CONFIRMED", "AUXILIARY", "LOW_CONFIDENCE", "NO_EXPLICIT_IMPLEMENTATION"]},
+        "annotation": {"type": "string", "minLength": 8},
+        "mappings": {"type": "array", "items": {"$ref": "#/$defs/mapping"}}
+      }
+    },
+    "mapping": {
+      "type": "object", "additionalProperties": false,
+      "required": ["filePath", "qualifiedName", "startLine", "endLine", "role"],
+      "properties": {
+        "filePath": {"type": "string", "pattern": "^(?!/)(?!.*\\.\\.).+\\.py$"},
+        "qualifiedName": {"type": "string", "minLength": 1},
+        "startLine": {"type": "integer", "minimum": 1},
+        "endLine": {"type": "integer", "minimum": 1},
+        "role": {"enum": ["PRIMARY", "SUPPORTING"]}
+      }
+    }
+  }
+}
