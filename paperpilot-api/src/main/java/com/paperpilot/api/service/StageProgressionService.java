@@ -3,14 +3,18 @@ package com.paperpilot.api.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.paperpilot.api.domain.TaskStateMachine;
 import com.paperpilot.api.domain.entity.AnalysisTask;
+import com.paperpilot.api.domain.entity.GitRepository;
 import com.paperpilot.api.domain.entity.StageExecution;
 import com.paperpilot.api.domain.enums.TaskStage;
 import com.paperpilot.api.domain.enums.TaskStatus;
 import com.paperpilot.api.dto.mq.StageTaskMessage;
 import com.paperpilot.api.dto.snapshot.StageSnapshotContract;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
+import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.mq.StageMessageProducer;
 import com.paperpilot.api.progress.TaskProgressService;
@@ -44,6 +48,7 @@ public class StageProgressionService {
     private final NextStageResolver nextStageResolver;
     private final AnalysisTaskMapper taskMapper;
     private final StageExecutionMapper stageExecutionMapper;
+    private final GitRepositoryMapper repositoryMapper;
     private final StageMessageProducer stageMessageProducer;
     private final TaskProgressService progressService;
     private final TaskEventService taskEventService;
@@ -82,17 +87,81 @@ public class StageProgressionService {
         return updated == 1;
     }
 
-    /** 下一阶段输入快照：引用上一阶段执行（具体输入语义由 T3 细化）。 */
+    /** 下一阶段输入快照：组装真实 Worker 契约，所有数据均来自 DB 固化状态。 */
     private String buildNextInputSnapshot(StageTaskMessage message, TaskStage next) {
-        Map<String, Object> input = new LinkedHashMap<>();
-        input.put("schemaVersion", StageSnapshotContract.SCHEMA_VERSION);
-        input.put("taskId", message.taskId());
-        input.put("stage", next.name());
-        input.put("upstreamStageExecutionId", message.stageExecutionId());
         try {
+            ObjectNode input = StageSnapshotContract.MAPPER.createObjectNode();
+            input.put("schemaVersion", StageSnapshotContract.SCHEMA_VERSION);
+            input.put("taskId", message.taskId());
+            input.put("stage", next.name());
+            input.put("upstreamStageExecutionId", message.stageExecutionId());
+            switch (next) {
+                case CLONE_REPOSITORY -> addRepositorySource(input, message.taskId());
+                case INDEX_CODE -> input.set("source", outputSummary(message.stageExecutionId()));
+                case MAP_CONCEPTS -> addMappingInputs(input, message.taskId(), message.stageExecutionId());
+                default -> throw new IllegalArgumentException("unsupported next stage: " + next);
+            }
             return StageSnapshotContract.MAPPER.writeValueAsString(input);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("输入快照序列化失败", e);
+        }
+    }
+
+    private void addRepositorySource(ObjectNode input, Long taskId) {
+        AnalysisTask task = taskMapper.selectById(taskId);
+        GitRepository repository = task == null || task.getRepositoryId() == null
+                ? null : repositoryMapper.selectById(task.getRepositoryId());
+        if (repository == null || repository.getGithubUrl() == null) {
+            throw new IllegalStateException("CLONE_REPOSITORY 缺少任务关联仓库 taskId=" + taskId);
+        }
+        ObjectNode source = input.putObject("source");
+        source.put("githubUrl", repository.getGithubUrl());
+        if (repository.getBranch() != null && !repository.getBranch().isBlank()) {
+            source.put("branch", repository.getBranch());
+        }
+    }
+
+    private void addMappingInputs(ObjectNode input, Long taskId, Long indexStageExecutionId) {
+        JsonNode parse = successfulOutputSummary(taskId, TaskStage.PARSE_PAPER);
+        JsonNode paper = parse.get("paper");
+        JsonNode index = outputSummary(indexStageExecutionId);
+        JsonNode symbols = index.get("symbols");
+        if (paper == null || !paper.isObject() || symbols == null || !symbols.isArray()) {
+            throw new IllegalStateException("MAP_CONCEPTS 缺少 paper/symbols taskId=" + taskId);
+        }
+        input.set("paper", paper);
+        input.set("symbols", symbols);
+        input.set("commitSha", index.path("commitSha"));
+    }
+
+    private JsonNode successfulOutputSummary(Long taskId, TaskStage stage) {
+        StageExecution execution = stageExecutionMapper.selectOne(new LambdaQueryWrapper<StageExecution>()
+                .eq(StageExecution::getTaskId, taskId)
+                .eq(StageExecution::getStage, stage)
+                .eq(StageExecution::getStatus, com.paperpilot.api.domain.enums.StageExecutionStatus.SUCCEEDED)
+                .orderByDesc(StageExecution::getAttempt)
+                .last("LIMIT 1"));
+        if (execution == null) {
+            throw new IllegalStateException("缺少已完成阶段 taskId=" + taskId + " stage=" + stage);
+        }
+        return outputSummary(execution.getId());
+    }
+
+    private JsonNode outputSummary(Long stageExecutionId) {
+        StageExecution execution = stageExecutionMapper.selectById(stageExecutionId);
+        if (execution == null || execution.getOutputSnapshot() == null) {
+            throw new IllegalStateException("缺少阶段输出 stageExecutionId=" + stageExecutionId);
+        }
+        try {
+            JsonNode root = StageSnapshotContract.MAPPER.readTree(execution.getOutputSnapshot());
+            // PARSE/CLONE 使用统一 StageOutputSnapshot；INDEX/MAP 持久化服务直接保存摘要。
+            JsonNode summary = root.has("summary") ? root.get("summary") : root;
+            if (summary == null || !summary.isObject()) {
+                throw new IllegalStateException("阶段输出缺少 summary stageExecutionId=" + stageExecutionId);
+            }
+            return summary;
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("阶段输出 JSON 无效 stageExecutionId=" + stageExecutionId, e);
         }
     }
 

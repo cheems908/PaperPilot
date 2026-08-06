@@ -40,6 +40,17 @@
 
 ## 开发
 
+项目固定使用 Python 3.11 和 `pyproject.toml` 中的精确依赖版本。重新建立环境时执行：
+
+```bash
+conda create -n paperpilot python=3.11 -y
+conda run -n paperpilot python -m pip install -e ".[dev]"
+conda run -n paperpilot python -m pip check
+```
+
+测试客户端显式使用 uvloop 后端，避免部分 Linux/Python 组合中默认 asyncio
+跨线程唤醒阻塞。`httpx2` 尚未作为稳定基线引入；升级 FastAPI/Starlette 时必须先运行全量测试。
+
 ```bash
 source ~/miniconda3/etc/profile.d/conda.sh && conda activate paperpilot
 uvicorn app.main:app --host 127.0.0.1 --port 8001

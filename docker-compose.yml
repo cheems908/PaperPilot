@@ -61,13 +61,15 @@ services:
     image: apache/rocketmq:5.3.0
     container_name: paperpilot-rmq-broker
     restart: unless-stopped
-    command: sh mqbroker -n rocketmq-namesrv:9876
+    command: sh mqbroker -c /home/rocketmq/rocketmq-5.3.0/conf/broker-local.conf
     ports:
       - "10911:10911"
       - "10909:10909"
     environment:
       NAMESRV_ADDR: rocketmq-namesrv:9876
       JAVA_OPT_EXT: "-Xms512m -Xmx512m"
+    volumes:
+      - ./docker/rocketmq/broker-local.conf:/home/rocketmq/rocketmq-5.3.0/conf/broker-local.conf:ro
     depends_on:
       rocketmq-namesrv:
         condition: service_healthy

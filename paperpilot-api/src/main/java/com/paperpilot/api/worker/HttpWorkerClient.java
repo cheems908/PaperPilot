@@ -12,6 +12,7 @@ import com.paperpilot.api.dto.worker.WorkerStageResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -59,6 +60,8 @@ public class HttpWorkerClient implements WorkerClient {
     public HttpWorkerClient(WorkerProperties properties) {
         this.properties = properties;
         this.httpClient = HttpClient.newBuilder()
+                // Uvicorn 不接受 h2c upgrade；强制 HTTP/1.1，避免升级探测消耗 POST body。
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(properties.connectTimeout())
                 .build();
         for (TaskStage stage : TaskStage.values()) {
@@ -73,7 +76,8 @@ public class HttpWorkerClient implements WorkerClient {
         long start = System.nanoTime();
         try {
             ResponseEntity<byte[]> response = clientsByStage.get(stage)
-                    .post().uri(path).body(request).retrieve().toEntity(byte[].class);
+                    .post().uri(path).contentType(MediaType.APPLICATION_JSON)
+                    .body(request).retrieve().toEntity(byte[].class);
             int status = response.getStatusCode().value();
             byte[] body = response.getBody() != null ? response.getBody() : new byte[0];
             if (body.length > MAX_RESPONSE_BYTES) {

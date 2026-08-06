@@ -77,8 +77,8 @@ class TaskRecoverySchedulerTest {
     @Test
     void twoInstancesRecoverLostQueuedMessageOnlyOnce() throws Exception {
         long[] ids = insert(TaskStatus.QUEUED, StageExecutionStatus.PENDING);
-        jdbcTemplate.update("UPDATE stage_execution SET updated_at=? WHERE id=?",
-                LocalDateTime.now().minusMinutes(1), ids[1]);
+        jdbcTemplate.update("UPDATE stage_execution SET input_snapshot=?, updated_at=? WHERE id=?",
+                "{\"schemaVersion\":1}", LocalDateTime.now().minusMinutes(1), ids[1]);
 
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -97,6 +97,18 @@ class TaskRecoverySchedulerTest {
         assertThat(pool.awaitTermination(20, TimeUnit.SECONDS)).isTrue();
 
         verify(producer, times(1)).send(any(StageTaskMessage.class));
+        assertThat(stageMapper.selectById(ids[1]).getStatus()).isEqualTo(StageExecutionStatus.PENDING);
+    }
+
+    @Test
+    void pendingFutureStageWithoutInputIsNeverRecovered() {
+        long[] ids = insert(TaskStatus.QUEUED, StageExecutionStatus.PENDING);
+        jdbcTemplate.update("UPDATE stage_execution SET updated_at=? WHERE id=?",
+                LocalDateTime.now().minusMinutes(1), ids[1]);
+
+        scheduler.recover();
+
+        verify(producer, never()).send(any());
         assertThat(stageMapper.selectById(ids[1]).getStatus()).isEqualTo(StageExecutionStatus.PENDING);
     }
 

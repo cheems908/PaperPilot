@@ -98,6 +98,8 @@ public class TaskRecoveryScheduler {
         LocalDateTime cutoff = now.minus(properties.queuedTimeout());
         List<StageExecution> candidates = stageMapper.selectList(new LambdaQueryWrapper<StageExecution>()
                 .eq(StageExecution::getStatus, StageExecutionStatus.PENDING)
+                // 只有输入已固化的阶段才可能是“消息丢失”；未来阶段仍为 PENDING 但不可派发。
+                .isNotNull(StageExecution::getInputSnapshot)
                 .le(StageExecution::getUpdatedAt, cutoff)
                 .gt(StageExecution::getId, 0L)
                 .orderByAsc(StageExecution::getId)
@@ -110,6 +112,7 @@ public class TaskRecoveryScheduler {
             int claimed = stageMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
                     .eq(StageExecution::getId, stage.getId())
                     .eq(StageExecution::getStatus, StageExecutionStatus.PENDING)
+                    .isNotNull(StageExecution::getInputSnapshot)
                     .eq(StageExecution::getVersion, stage.getVersion())
                     .le(StageExecution::getUpdatedAt, cutoff)
                     .set(StageExecution::getVersion, stage.getVersion() + 1));

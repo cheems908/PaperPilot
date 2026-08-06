@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +41,7 @@ public class CodeSymbolPersistenceService {
             throw new RuntimeException("INDEX_CODE 输出缺少 commitSha");
         }
         int symbolCount = 0;
+        List<Map<String, Object>> symbols = new ArrayList<>();
         for (FileSymbols file : result.files() == null ? List.<FileSymbols>of() : result.files()) {
             if (file.symbols() == null) {
                 continue;
@@ -54,6 +56,18 @@ public class CodeSymbolPersistenceService {
                 row.setLineNumber(symbol.startLine());
                 codeSymbolMapper.upsert(row);
                 symbolCount++;
+                Map<String, Object> compact = new LinkedHashMap<>();
+                compact.put("filePath", file.path());
+                compact.put("commitSha", result.commitSha());
+                compact.put("kind", symbol.kind());
+                compact.put("name", symbol.name());
+                compact.put("qualifiedName", symbol.qualifiedName());
+                compact.put("signature", symbol.signature());
+                compact.put("docstring", symbol.docstring());
+                compact.put("startLine", symbol.startLine());
+                compact.put("endLine", symbol.endLine());
+                compact.put("parent", symbol.parent());
+                symbols.add(compact);
             }
         }
         Map<String, Object> summary = new LinkedHashMap<>();
@@ -62,6 +76,8 @@ public class CodeSymbolPersistenceService {
         summary.put("symbolCount", symbolCount);
         summary.put("warningCount", result.warnings() == null ? 0 : result.warnings().size());
         summary.put("warnings", result.warnings() == null ? List.of() : result.warnings());
+        // 下一阶段直接消费完整、固定 commit 的 AST 证据；MEDIUMTEXT 由 V7 提供容量。
+        summary.put("symbols", symbols);
         log.info("code_symbol upsert repositoryId={} commitSha={} symbolCount={}",
                 repositoryId, result.commitSha(), symbolCount);
         try {

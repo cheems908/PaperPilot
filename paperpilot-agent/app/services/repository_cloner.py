@@ -8,6 +8,7 @@
 不运行仓库代码，不支持私有仓库 / Token / GitLab / submodule / LFS。
 """
 import os
+import hashlib
 import re
 import shutil
 import subprocess
@@ -109,18 +110,42 @@ class RepositoryCloner:
         temp = task_dir / f".{stage_execution_id}-{uuid.uuid4().hex[:8]}-tmp"
         try:
             with self._semaphore:
+                cache = self._cache_path(url, branch)
                 temp.mkdir(parents=True)
-                self._git_clone(url, branch, temp)
+                cached_commit = self._rev_parse(cache) if cache.is_dir() else None
+                if cached_commit:
+                    temp.rmdir()
+                    shutil.copytree(cache, temp, symlinks=True)
+                else:
+                    self._git_clone(url, branch, temp)
                 self._check_limits(temp)
                 commit = self._rev_parse(temp)
                 if not commit:
                     raise StageServiceError(StageErrorCode.GITHUB_TEMPORARY_FAILURE,
                                             "rev-parse HEAD failed", retryable=True, status_code=500)
                 os.replace(temp, published)
+                if not cached_commit:
+                    self._publish_cache(published, cache)
             return workspace_ref, commit
         except Exception:
             shutil.rmtree(temp, ignore_errors=True)
             raise
+
+    def _cache_path(self, url: str, branch: str | None) -> Path:
+        key = hashlib.sha256(f"{url}\n{branch or ''}".encode()).hexdigest()
+        return self.workspace_root / ".repo-cache" / key
+
+    def _publish_cache(self, repository: Path, cache: Path) -> None:
+        """首次真实 clone 后原子发布缓存；失败不影响当前阶段成功。"""
+        if cache.exists():
+            return
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        temporary = cache.parent / f".{cache.name}-{uuid.uuid4().hex[:8]}-tmp"
+        try:
+            shutil.copytree(repository, temporary, symlinks=True)
+            os.replace(temporary, cache)
+        except OSError:
+            shutil.rmtree(temporary, ignore_errors=True)
 
     def _git_clone(self, url: str, branch: str | None, target: Path) -> None:
         args = ["clone", "--depth", "1"]

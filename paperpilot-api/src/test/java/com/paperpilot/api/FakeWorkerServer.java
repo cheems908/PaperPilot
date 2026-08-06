@@ -136,6 +136,18 @@ public final class FakeWorkerServer implements AutoCloseable {
                     + "\"stats\":{\"fileCount\":0,\"symbolCount\":0,\"warningCount\":0}},"
                     + "\"artifacts\":[],\"metrics\":{},\"workerVersion\":\"fake-1.0.0\"}";
         }
+        if ("PARSE_PAPER".equals(stage)) {
+            return "{\"schemaVersion\":1,\"success\":true,"
+                    + "\"output\":{\"paper\":{\"title\":\"PatchTST\",\"sections\":[]},"
+                    + "\"parser\":{\"name\":\"fake\",\"version\":\"1\"},\"warnings\":[],\"stats\":{}},"
+                    + "\"artifacts\":[],\"metrics\":{},\"workerVersion\":\"fake-1.0.0\"}";
+        }
+        if ("CLONE_REPOSITORY".equals(stage)) {
+            return "{\"schemaVersion\":1,\"success\":true,"
+                    + "\"output\":{\"canonicalUrl\":\"https://github.com/paperpilot/patchtst\","
+                    + "\"commitSha\":\"" + "f".repeat(40) + "\",\"workspaceRef\":\"task-1/stage-1\"},"
+                    + "\"artifacts\":[],\"metrics\":{},\"workerVersion\":\"fake-1.0.0\"}";
+        }
         if ("MAP_CONCEPTS".equals(stage)) {
             // MAP 阶段输出必须是合法 MappingOutput（含 concepts + candidates）
             String commit = "f".repeat(40);

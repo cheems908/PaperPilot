@@ -36,11 +36,13 @@ class _RedirectCloner(RepositoryCloner):
                               timeout=timeout, check=False)
 
 
-def _req(url: str, branch: str | None = None) -> StageRequest:
+def _req(url: str, branch: str | None = None, task_id: int = 7,
+         stage_execution_id: int = 34) -> StageRequest:
     source = {"githubUrl": url}
     if branch:
         source["branch"] = branch
-    return StageRequest(taskId=7, stageExecutionId=34, stage="CLONE_REPOSITORY", attempt=1,
+    return StageRequest(taskId=task_id, stageExecutionId=stage_execution_id,
+                        stage="CLONE_REPOSITORY", attempt=1,
                         input={"source": source})
 
 
@@ -114,6 +116,20 @@ def test_repeated_clone_is_idempotent_and_reuses(tmp_path: Path):
     assert first.output["commitSha"] == second.output["commitSha"]
     assert first.output["workspaceRef"] == second.output["workspaceRef"]
     assert cloner.clone_calls == 1  # 第二次复用已发布目录，未重新克隆
+
+
+def test_verified_cache_reuses_clone_across_tasks(tmp_path: Path):
+    repo = tmp_path / "remote"
+    _init_local_repo(repo, {"a.py": b"print(1)\n"})
+    cloner = _cloner(tmp_path, repo)
+
+    first = cloner.process(_req("https://github.com/paperpilot/patchtst"))
+    second = cloner.process(_req("https://github.com/paperpilot/patchtst",
+                                 task_id=8, stage_execution_id=35))
+
+    assert first.output["commitSha"] == second.output["commitSha"]
+    assert second.output["workspaceRef"] == "task-8/stage-35"
+    assert cloner.clone_calls == 1
 
 
 def test_failure_leaves_no_workspace_residue(tmp_path: Path):

@@ -102,8 +102,19 @@ public class StageExecutionService {
                 e.getStage().name(),
                 e.getAttempt(),
                 e.getStatus().name(),
-                e.getSnapshot(),
+                responseSnapshot(e),
                 e.getErrorMessage(),
                 e.getUpdatedAt());
+    }
+
+    /** 新契约优先，旧 snapshot 仅作历史兼容。 */
+    private String responseSnapshot(StageExecution e) {
+        if (e.getOutputSnapshot() != null) {
+            return e.getOutputSnapshot();
+        }
+        if (e.getErrorSnapshot() != null) {
+            return e.getErrorSnapshot();
+        }
+        return e.getSnapshot();
     }
 }

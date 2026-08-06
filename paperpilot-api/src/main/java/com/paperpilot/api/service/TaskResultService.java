@@ -55,7 +55,7 @@ public class TaskResultService {
         List<StageExecution> stages = stageExecutionService.listByTask(taskId);
         List<StageResponse> stageResponses = stages.stream()
                 .map(s -> new StageResponse(s.getStage().name(), s.getAttempt(),
-                        s.getStatus().name(), s.getSnapshot(), s.getErrorMessage(), s.getUpdatedAt()))
+                        s.getStatus().name(), responseSnapshot(s), s.getErrorMessage(), s.getUpdatedAt()))
                 .toList();
 
         PaperInfo paper = null;
@@ -77,8 +77,8 @@ public class TaskResultService {
         // 聚合已完成阶段的快照：stage.name -> snapshot JSON
         Map<String, Object> result = new LinkedHashMap<>();
         for (StageExecution s : stages) {
-            if (s.getStatus() == StageExecutionStatus.SUCCEEDED && s.getSnapshot() != null) {
-                result.put(s.getStage().name(), s.getSnapshot());
+            if (s.getStatus() == StageExecutionStatus.SUCCEEDED && responseSnapshot(s) != null) {
+                result.put(s.getStage().name(), responseSnapshot(s));
             }
         }
 
@@ -120,5 +120,9 @@ public class TaskResultService {
 
         return new TaskResultResponse(taskId, task.getStatus().name(), paper, repository,
                 stageResponses, result, mappingStatus, mappings);
+    }
+
+    private String responseSnapshot(StageExecution stage) {
+        return stage.getOutputSnapshot() != null ? stage.getOutputSnapshot() : stage.getSnapshot();
     }
 }

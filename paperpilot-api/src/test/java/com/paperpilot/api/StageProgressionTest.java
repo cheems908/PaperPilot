@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.paperpilot.api.domain.entity.AnalysisTask;
 import com.paperpilot.api.domain.entity.Project;
+import com.paperpilot.api.domain.entity.GitRepository;
 import com.paperpilot.api.domain.entity.StageExecution;
 import com.paperpilot.api.domain.enums.StageExecutionStatus;
 import com.paperpilot.api.domain.enums.TaskStage;
@@ -11,6 +12,7 @@ import com.paperpilot.api.domain.enums.TaskStatus;
 import com.paperpilot.api.dto.mq.StageTaskMessage;
 import com.paperpilot.api.mapper.AnalysisTaskMapper;
 import com.paperpilot.api.mapper.ProjectMapper;
+import com.paperpilot.api.mapper.GitRepositoryMapper;
 import com.paperpilot.api.mapper.StageExecutionMapper;
 import com.paperpilot.api.mq.StageMessageProducer;
 import com.paperpilot.api.service.StageProgressionService;
@@ -61,6 +63,8 @@ class StageProgressionTest {
     StageExecutionMapper stageExecutionMapper;
     @Autowired
     ProjectMapper projectMapper;
+    @Autowired
+    GitRepositoryMapper repositoryMapper;
 
     @BeforeAll
     static void migrate() {
@@ -78,7 +82,8 @@ class StageProgressionTest {
         StageExecution clone = stageBy(taskId, TaskStage.CLONE_REPOSITORY);
         assertThat(clone.getInputSnapshot())
                 .contains("\"stage\":\"CLONE_REPOSITORY\"")
-                .contains("\"upstreamStageExecutionId\":" + parse.getId());
+                .contains("\"upstreamStageExecutionId\":" + parse.getId())
+                .contains("\"githubUrl\":\"https://github.com/paperpilot/patchtst\"");
         ArgumentCaptor<StageTaskMessage> captor = ArgumentCaptor.forClass(StageTaskMessage.class);
         verify(producer, times(1)).send(captor.capture());
         StageTaskMessage next = captor.getValue();
@@ -101,6 +106,43 @@ class StageProgressionTest {
         verify(producer, times(1)).send(any());
         StageExecution clone = stageBy(taskId, TaskStage.CLONE_REPOSITORY);
         assertThat(clone.getInputSnapshot()).isNotNull();
+    }
+
+    @Test
+    void cloneOutputBecomesIndexSource() {
+        long taskId = insertRunningTaskWithStages();
+        String output = "{\"schemaVersion\":1,\"workerVersion\":\"test\",\"artifactRefs\":[],"
+                + "\"summary\":{\"commitSha\":\"" + "a".repeat(40)
+                + "\",\"workspaceRef\":\"task-1/stage-2\"}}";
+        markSucceededWithOutput(taskId, TaskStage.CLONE_REPOSITORY, output);
+        StageExecution clone = stageBy(taskId, TaskStage.CLONE_REPOSITORY);
+
+        progressionService.advance(StageTaskMessage.create(
+                taskId, clone.getId(), TaskStage.CLONE_REPOSITORY, 1));
+
+        assertThat(stageBy(taskId, TaskStage.INDEX_CODE).getInputSnapshot())
+                .contains("\"workspaceRef\":\"task-1/stage-2\"")
+                .contains("\"commitSha\":\"" + "a".repeat(40) + "\"");
+    }
+
+    @Test
+    void paperAndIndexEvidenceBecomeMappingInput() {
+        long taskId = insertRunningTaskWithStages();
+        markSucceededWithOutput(taskId, TaskStage.PARSE_PAPER,
+                "{\"schemaVersion\":1,\"workerVersion\":\"test\",\"artifactRefs\":[],"
+                        + "\"summary\":{\"paper\":{\"title\":\"PatchTST\",\"sections\":[]}}}");
+        markSucceededWithOutput(taskId, TaskStage.INDEX_CODE,
+                "{\"schemaVersion\":1,\"workerVersion\":\"test\",\"artifactRefs\":[],"
+                        + "\"summary\":{\"commitSha\":\"" + "b".repeat(40) + "\","
+                        + "\"symbols\":[{\"filePath\":\"model.py\",\"qualifiedName\":\"Model.forward\"}]}}}");
+        StageExecution index = stageBy(taskId, TaskStage.INDEX_CODE);
+
+        progressionService.advance(StageTaskMessage.create(taskId, index.getId(), TaskStage.INDEX_CODE, 1));
+
+        assertThat(stageBy(taskId, TaskStage.MAP_CONCEPTS).getInputSnapshot())
+                .contains("\"paper\":{\"title\":\"PatchTST\"")
+                .contains("\"symbols\":[{\"filePath\":\"model.py\"")
+                .contains("\"commitSha\":\"" + "b".repeat(40) + "\"");
     }
 
     @Test
@@ -139,8 +181,15 @@ class StageProgressionTest {
         project.setName("p");
         projectMapper.insert(project);
 
+        GitRepository repository = new GitRepository();
+        repository.setProjectId(project.getId());
+        repository.setGithubUrl("https://github.com/paperpilot/patchtst");
+        repository.setBranch("main");
+        repositoryMapper.insert(repository);
+
         AnalysisTask task = new AnalysisTask();
         task.setProjectId(project.getId());
+        task.setRepositoryId(repository.getId());
         task.setStatus(TaskStatus.RUNNING);
         task.setRequestKey("req-" + UUID.randomUUID());
         taskMapper.insert(task);
@@ -162,6 +211,15 @@ class StageProgressionTest {
                 .eq(StageExecution::getStage, stage)
                 .eq(StageExecution::getAttempt, 1)
                 .set(StageExecution::getStatus, StageExecutionStatus.SUCCEEDED));
+    }
+
+    private void markSucceededWithOutput(long taskId, TaskStage stage, String output) {
+        stageExecutionMapper.update(null, new LambdaUpdateWrapper<StageExecution>()
+                .eq(StageExecution::getTaskId, taskId)
+                .eq(StageExecution::getStage, stage)
+                .eq(StageExecution::getAttempt, 1)
+                .set(StageExecution::getStatus, StageExecutionStatus.SUCCEEDED)
+                .set(StageExecution::getOutputSnapshot, output));
     }
 
     private StageExecution stageBy(long taskId, TaskStage stage) {

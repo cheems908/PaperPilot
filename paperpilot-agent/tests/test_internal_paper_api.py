@@ -10,7 +10,7 @@ from app.main import app
 from app.services.paper_parser import paper_parser
 from tests.test_paper_parser import _StubGrobid, TEI_FIXTURE
 
-client = TestClient(app)
+client = TestClient(app, backend_options={"use_uvloop": True})
 
 
 def _make_pdf(path: Path) -> None:

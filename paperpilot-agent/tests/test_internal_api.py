@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from app.core.config import settings
 from app.main import app
 
-client = TestClient(app)
+client = TestClient(app, backend_options={"use_uvloop": True})
 
 INTERNAL_PATHS = [
     "/internal/health",

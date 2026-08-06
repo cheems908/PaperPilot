@@ -7,6 +7,7 @@
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -22,6 +23,19 @@ app = FastAPI(title="PaperPilot Agent Worker", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 app.include_router(internal_router)
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_validation_error(request: Request, exc: RequestValidationError):
+    """校验错误也使用稳定 Worker 错误体，日志只记录字段位置与类型。"""
+    details = [{"loc": list(error["loc"]), "type": error["type"]} for error in exc.errors()]
+    logger.warning("invalid request on %s: %s", request.url.path, details)
+    body = StageErrorResponse(
+        errorCode=StageErrorCode.BAD_REQUEST,
+        retryable=False,
+        message="request validation failed",
+    )
+    return JSONResponse(status_code=422, content=body.model_dump())
 
 
 @app.exception_handler(StageServiceError)

@@ -8,7 +8,7 @@ from app.main import app
 from app.services.repository_cloner import repository_cloner
 from tests.test_repository_cloner import _init_local_repo
 
-client = TestClient(app)
+client = TestClient(app, backend_options={"use_uvloop": True})
 
 
 def _payload(url: str) -> dict:

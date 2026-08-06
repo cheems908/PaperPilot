@@ -19,6 +19,7 @@ public class StageErrorClassifier {
             "WORKER_UNAVAILABLE",
             "GROBID_UNAVAILABLE",
             "GITHUB_TEMPORARY_FAILURE",
+            "CLONE_TIMEOUT",
             "LLM_RATE_LIMITED",
             "EXECUTION_LEASE_EXPIRED");
 
